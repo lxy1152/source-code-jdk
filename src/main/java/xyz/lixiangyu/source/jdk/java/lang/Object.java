@@ -26,146 +26,126 @@
 package java.lang;
 
 /**
- * Class {@code Object} is the root of the class hierarchy.
- * Every class has {@code Object} as a superclass. All objects,
- * including arrays, implement the methods of this class.
+ * {@code Object}类是所有对象的父类，包括数组
  *
- * @author  unascribed
- * @see     java.lang.Class
- * @since   JDK1.0
+ * @author unascribed
+ * @see java.lang.Class
+ * @since JDK1.0
  */
 public class Object {
-
+    /**
+     * 注册本地方法
+     */
     private static native void registerNatives();
+
     static {
         registerNatives();
     }
 
     /**
-     * Returns the runtime class of this {@code Object}. The returned
-     * {@code Class} object is the object that is locked by {@code
-     * static synchronized} methods of the represented class.
-     *
-     * <p><b>The actual result type is {@code Class<? extends |X|>}
-     * where {@code |X|} is the erasure of the static type of the
-     * expression on which {@code getClass} is called.</b> For
-     * example, no cast is required in this code fragment:</p>
-     *
+     * 返回这个 {@code Object} 的运行时类，返回的 {@code Class} 对象是由
+     * {@code static synchronized} 方法锁定的对象。<br>
+     * <b>注意：这里实际的返回类型是 {@code Class<? extends |X|>}，所以对于如下
+     * 的代码是不需要强转类型的：</b>
      * <p>
      * {@code Number n = 0;                             }<br>
      * {@code Class<? extends Number> c = n.getClass(); }
      * </p>
      *
-     * @return The {@code Class} object that represents the runtime
-     *         class of this object.
+     * @return 返回这个对象的运行时 {@code Class} 对象
      * @jls 15.8.2 Class Literals
      */
     public final native Class<?> getClass();
 
     /**
-     * Returns a hash code value for the object. This method is
-     * supported for the benefit of hash tables such as those provided by
-     * {@link java.util.HashMap}.
+     * 返回该对象的哈希码，提供此方法是为了哈希表，比如 {@link java.util.HashMap}。
      * <p>
-     * The general contract of {@code hashCode} is:
+     * {@link #hashCode()} 的使用需要遵循以下规定
      * <ul>
-     * <li>Whenever it is invoked on the same object more than once during
-     *     an execution of a Java application, the {@code hashCode} method
-     *     must consistently return the same integer, provided no information
-     *     used in {@code equals} comparisons on the object is modified.
-     *     This integer need not remain consistent from one execution of an
-     *     application to another execution of the same application.
-     * <li>If two objects are equal according to the {@code equals(Object)}
-     *     method, then calling the {@code hashCode} method on each of
-     *     the two objects must produce the same integer result.
-     * <li>It is <em>not</em> required that if two objects are unequal
-     *     according to the {@link java.lang.Object#equals(java.lang.Object)}
-     *     method, then calling the {@code hashCode} method on each of the
-     *     two objects must produce distinct integer results.  However, the
-     *     programmer should be aware that producing distinct integer results
-     *     for unequal objects may improve the performance of hash tables.
+     *     <li>
+     *         如果这个对象在 {@link #equals(Object)} 方法中所使用的的值没有修改，
+     *         那么多次调用 {@code hashCode} 方法时应得到相同的哈希值。同一程序的
+     *         多次执行之间，哈希值不需要保持一致
+     *     </li>
+     *     <li>
+     *         如果两个不同的对象通过 {@link #equals(Object)} 方法比较是相同的，
+     *         那么它们的哈希值也应该是相同的
+     *     </li>
+     *     <li>
+     *         如果两个对象通过 {@link #equals(Object)} 方法比较是不同的，那么
+     *         它们的哈希值也可以是相同的。但开发人员需要注意，保证哈希值的唯一性
+     *         可以提高哈希表的性能。
+     *     </li>
      * </ul>
      * <p>
-     * As much as is reasonably practical, the hashCode method defined by
-     * class {@code Object} does return distinct integers for distinct
-     * objects. (This is typically implemented by converting the internal
-     * address of the object into an integer, but this implementation
-     * technique is not required by the
-     * Java&trade; programming language.)
+     * 在 {@code Object} 类中提供的 {@link #hashCode()} 方法确实会为每个对象生成
+     * 一个不同的哈希值（这一般是通过将该对象的内部地址转换成一个整数来实现的）。
      *
-     * @return  a hash code value for this object.
-     * @see     java.lang.Object#equals(java.lang.Object)
-     * @see     java.lang.System#identityHashCode
+     * @return 该对象的哈希值
+     * @see java.lang.Object#equals(java.lang.Object)
+     * @see java.lang.System#identityHashCode
      */
     public native int hashCode();
 
     /**
-     * Indicates whether some other object is "equal to" this one.
+     * 通过这个方法可以判断两个对象是否相等
      * <p>
-     * The {@code equals} method implements an equivalence relation
-     * on non-null object references:
+     * 在使用 {@link #equals(Object)} 方法时需要遵循以下四个特性：
      * <ul>
-     * <li>It is <i>reflexive</i>: for any non-null reference value
-     *     {@code x}, {@code x.equals(x)} should return
-     *     {@code true}.
-     * <li>It is <i>symmetric</i>: for any non-null reference values
-     *     {@code x} and {@code y}, {@code x.equals(y)}
-     *     should return {@code true} if and only if
-     *     {@code y.equals(x)} returns {@code true}.
-     * <li>It is <i>transitive</i>: for any non-null reference values
-     *     {@code x}, {@code y}, and {@code z}, if
-     *     {@code x.equals(y)} returns {@code true} and
-     *     {@code y.equals(z)} returns {@code true}, then
-     *     {@code x.equals(z)} should return {@code true}.
-     * <li>It is <i>consistent</i>: for any non-null reference values
-     *     {@code x} and {@code y}, multiple invocations of
-     *     {@code x.equals(y)} consistently return {@code true}
-     *     or consistently return {@code false}, provided no
-     *     information used in {@code equals} comparisons on the
-     *     objects is modified.
-     * <li>For any non-null reference value {@code x},
-     *     {@code x.equals(null)} should return {@code false}.
+     *     <li>
+     *         自反性：对于某个非空引用 {@code x}，{@code x.equals(x)} 应始终
+     *         返回{@code true}
+     *     </li>
+     *     <li>
+     *         对称性：对于某两个非空引用 {@code x} 和 {@code y}，如果
+     *         {@code x.equals(y)} 返回 {@code true}，那么
+     *         {@code y.equals(x)} 也应该返回 {@code true}
+     *     </li>
+     *     <li>
+     *         传递性：对于某三个非空引用 {@code x}、{@code y} 和 {@code z}，
+     *         如果 {@code x.equals(y)} 返回 {@code true}，同时 {@code y.equals(z)}
+     *         也返回 {@code true}，那么就可以得到 {@code x.equals(z)} 也为
+     *         {@code true}
+     *     </li>
+     *     <li>
+     *         一致性：对于某两个非空引用 {@code x} 和 {@code y}，如果在
+     *         {@link #equals(Object)} 方法比较的值没有修改，那么多次调用
+     *         {@link #equals(Object)} 方法应得到相同的结果
+     *     </li>
+     *     <li>
+     *         与 {@code null} 的比较：对于某个非空引用 {@code x}，
+     *         {@code x.equals(null)} 应该返回 {@code false}
+     *     </li>
      * </ul>
      * <p>
-     * The {@code equals} method for class {@code Object} implements
-     * the most discriminating possible equivalence relation on objects;
-     * that is, for any non-null reference values {@code x} and
-     * {@code y}, this method returns {@code true} if and only
-     * if {@code x} and {@code y} refer to the same object
-     * ({@code x == y} has the value {@code true}).
+     * 在 {@link Object} 中，{@link #equals(Object)} 方法的默认实现是比较两个
+     * 对象的地址。另外重写本方法时，最好一起重写 {@link #hashCode()} 方法。
      * <p>
-     * Note that it is generally necessary to override the {@code hashCode}
-     * method whenever this method is overridden, so as to maintain the
-     * general contract for the {@code hashCode} method, which states
-     * that equal objects must have equal hash codes.
      *
-     * @param   obj   the reference object with which to compare.
-     * @return  {@code true} if this object is the same as the obj
-     *          argument; {@code false} otherwise.
-     * @see     #hashCode()
-     * @see     java.util.HashMap
+     * @param 某个要比较的对象
+     * @return 如果相同则返回 {@code true}，否则返回 {@code false}
+     * @see #hashCode()
+     * @see java.util.HashMap
      */
     public boolean equals(Object obj) {
         return (this == obj);
     }
 
     /**
-     * Creates and returns a copy of this object.  The precise meaning
-     * of "copy" may depend on the class of the object. The general
-     * intent is that, for any object {@code x}, the expression:
-     * <blockquote>
-     * <pre>
-     * x.clone() != x</pre></blockquote>
-     * will be true, and that the expression:
-     * <blockquote>
-     * <pre>
-     * x.clone().getClass() == x.getClass()</pre></blockquote>
-     * will be {@code true}, but these are not absolute requirements.
-     * While it is typically the case that:
-     * <blockquote>
-     * <pre>
-     * x.clone().equals(x)</pre></blockquote>
-     * will be {@code true}, this is not an absolute requirement.
+     * 创建并返回此对象的一个副本。通常来说，对于某个对象 {@code x}，它与它
+     * 的副本应该满足以下条件，<b>但下述条件并非绝对需要满足条件</b>：
+     * <ul>
+     *     <li>
+     *         {@code x.clone() != x} 为 {@code true}
+     *     </li>
+     *     <li>
+     *         {@code x.clone().getClass() == x.getClass()} 为
+     *         {@code true}
+     *     </li>
+     *     <li>
+     *         {@code x.clone().equals(x)} 为 {@code true}
+     *     </li>
+     * </ul>
      * <p>
      * By convention, the returned object should be obtained by calling
      * {@code super.clone}.  If a class and all of its superclasses (except
@@ -201,12 +181,12 @@ public class Object {
      * whose class is {@code Object} will result in throwing an
      * exception at run time.
      *
-     * @return     a clone of this instance.
-     * @throws  CloneNotSupportedException  if the object's class does not
-     *               support the {@code Cloneable} interface. Subclasses
-     *               that override the {@code clone} method can also
-     *               throw this exception to indicate that an instance cannot
-     *               be cloned.
+     * @return a clone of this instance.
+     * @throws CloneNotSupportedException if the object's class does not
+     *                                    support the {@code Cloneable} interface. Subclasses
+     *                                    that override the {@code clone} method can also
+     *                                    throw this exception to indicate that an instance cannot
+     *                                    be cloned.
      * @see java.lang.Cloneable
      */
     protected native Object clone() throws CloneNotSupportedException;
@@ -230,7 +210,7 @@ public class Object {
      * getClass().getName() + '@' + Integer.toHexString(hashCode())
      * </pre></blockquote>
      *
-     * @return  a string representation of the object.
+     * @return a string representation of the object.
      */
     public String toString() {
         return getClass().getName() + "@" + Integer.toHexString(hashCode());
@@ -263,10 +243,10 @@ public class Object {
      * <p>
      * Only one thread at a time can own an object's monitor.
      *
-     * @throws  IllegalMonitorStateException  if the current thread is not
-     *               the owner of this object's monitor.
-     * @see        java.lang.Object#notifyAll()
-     * @see        java.lang.Object#wait()
+     * @throws IllegalMonitorStateException if the current thread is not
+     *                                      the owner of this object's monitor.
+     * @see java.lang.Object#notifyAll()
+     * @see java.lang.Object#wait()
      */
     public final native void notify();
 
@@ -287,10 +267,10 @@ public class Object {
      * description of the ways in which a thread can become the owner of
      * a monitor.
      *
-     * @throws  IllegalMonitorStateException  if the current thread is not
-     *               the owner of this object's monitor.
-     * @see        java.lang.Object#notify()
-     * @see        java.lang.Object#wait()
+     * @throws IllegalMonitorStateException if the current thread is not
+     *                                      the owner of this object's monitor.
+     * @see java.lang.Object#notify()
+     * @see java.lang.Object#wait()
      */
     public final native void notifyAll();
 
@@ -366,18 +346,18 @@ public class Object {
      * description of the ways in which a thread can become the owner of
      * a monitor.
      *
-     * @param      timeout   the maximum time to wait in milliseconds.
-     * @throws  IllegalArgumentException      if the value of timeout is
-     *               negative.
-     * @throws  IllegalMonitorStateException  if the current thread is not
-     *               the owner of the object's monitor.
-     * @throws  InterruptedException if any thread interrupted the
-     *             current thread before or while the current thread
-     *             was waiting for a notification.  The <i>interrupted
-     *             status</i> of the current thread is cleared when
-     *             this exception is thrown.
-     * @see        java.lang.Object#notify()
-     * @see        java.lang.Object#notifyAll()
+     * @param timeout the maximum time to wait in milliseconds.
+     * @throws IllegalArgumentException     if the value of timeout is
+     *                                      negative.
+     * @throws IllegalMonitorStateException if the current thread is not
+     *                                      the owner of the object's monitor.
+     * @throws InterruptedException         if any thread interrupted the
+     *                                      current thread before or while the current thread
+     *                                      was waiting for a notification.  The <i>interrupted
+     *                                      status</i> of the current thread is cleared when
+     *                                      this exception is thrown.
+     * @see java.lang.Object#notify()
+     * @see java.lang.Object#notifyAll()
      */
     public final native void wait(long timeout) throws InterruptedException;
 
@@ -429,19 +409,19 @@ public class Object {
      * description of the ways in which a thread can become the owner of
      * a monitor.
      *
-     * @param      timeout   the maximum time to wait in milliseconds.
-     * @param      nanos      additional time, in nanoseconds range
-     *                       0-999999.
-     * @throws  IllegalArgumentException      if the value of timeout is
-     *                      negative or the value of nanos is
-     *                      not in the range 0-999999.
-     * @throws  IllegalMonitorStateException  if the current thread is not
-     *               the owner of this object's monitor.
-     * @throws  InterruptedException if any thread interrupted the
-     *             current thread before or while the current thread
-     *             was waiting for a notification.  The <i>interrupted
-     *             status</i> of the current thread is cleared when
-     *             this exception is thrown.
+     * @param timeout the maximum time to wait in milliseconds.
+     * @param nanos   additional time, in nanoseconds range
+     *                0-999999.
+     * @throws IllegalArgumentException     if the value of timeout is
+     *                                      negative or the value of nanos is
+     *                                      not in the range 0-999999.
+     * @throws IllegalMonitorStateException if the current thread is not
+     *                                      the owner of this object's monitor.
+     * @throws InterruptedException         if any thread interrupted the
+     *                                      current thread before or while the current thread
+     *                                      was waiting for a notification.  The <i>interrupted
+     *                                      status</i> of the current thread is cleared when
+     *                                      this exception is thrown.
      */
     public final void wait(long timeout, int nanos) throws InterruptedException {
         if (timeout < 0) {
@@ -450,7 +430,7 @@ public class Object {
 
         if (nanos < 0 || nanos > 999999) {
             throw new IllegalArgumentException(
-                                "nanosecond timeout value out of range");
+                    "nanosecond timeout value out of range");
         }
 
         if (nanos > 0) {
@@ -488,15 +468,15 @@ public class Object {
      * description of the ways in which a thread can become the owner of
      * a monitor.
      *
-     * @throws  IllegalMonitorStateException  if the current thread is not
-     *               the owner of the object's monitor.
-     * @throws  InterruptedException if any thread interrupted the
-     *             current thread before or while the current thread
-     *             was waiting for a notification.  The <i>interrupted
-     *             status</i> of the current thread is cleared when
-     *             this exception is thrown.
-     * @see        java.lang.Object#notify()
-     * @see        java.lang.Object#notifyAll()
+     * @throws IllegalMonitorStateException if the current thread is not
+     *                                      the owner of the object's monitor.
+     * @throws InterruptedException         if any thread interrupted the
+     *                                      current thread before or while the current thread
+     *                                      was waiting for a notification.  The <i>interrupted
+     *                                      status</i> of the current thread is cleared when
+     *                                      this exception is thrown.
+     * @see java.lang.Object#notify()
+     * @see java.lang.Object#notifyAll()
      */
     public final void wait() throws InterruptedException {
         wait(0);
@@ -548,9 +528,10 @@ public class Object {
      * ignored.
      *
      * @throws Throwable the {@code Exception} raised by this method
+     * @jls 12.6 Finalization of Class Instances
      * @see java.lang.ref.WeakReference
      * @see java.lang.ref.PhantomReference
-     * @jls 12.6 Finalization of Class Instances
      */
-    protected void finalize() throws Throwable { }
+    protected void finalize() throws Throwable {
+    }
 }
