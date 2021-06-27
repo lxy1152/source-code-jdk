@@ -7,8 +7,12 @@ import org.junit.Test;
  */
 public class ObjectTest {
     @Test
-    public void test() {
-        Object obj = new Object();
-        System.out.println(obj.hashCode());
+    public void getClassTest() {
+        Number number = new Integer(1);
+        Class<? extends Number> clazz = number.getClass();
+        Class<?> clazz1 = number.getClass();
+        // 这种写法是错误的
+        // Class<Integer> clazz2 = number.getClass();
+        System.out.println(clazz);
     }
 }
