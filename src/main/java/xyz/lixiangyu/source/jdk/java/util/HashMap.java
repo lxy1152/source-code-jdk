@@ -163,6 +163,8 @@ import sun.misc.SharedSecrets;
  * @since 1.2
  */
 public class HashMap<K, V> extends AbstractMap<K, V> implements Map<K, V>, Cloneable, Serializable {
+    /* ---------------- 静态变量 -------------- */
+
     /**
      * 序列化 id
      */
@@ -269,13 +271,14 @@ public class HashMap<K, V> extends AbstractMap<K, V> implements Map<K, V>, Clone
          * @return 两节点是否相同
          */
         public final boolean equals(Object o) {
-            if (o == this)
+            if (o == this) {
                 return true;
+            }
             if (o instanceof Map.Entry) {
                 Map.Entry<?, ?> e = (Map.Entry<?, ?>) o;
-                if (Objects.equals(key, e.getKey()) &&
-                        Objects.equals(value, e.getValue()))
+                if (Objects.equals(key, e.getKey()) && Objects.equals(value, e.getValue())) {
                     return true;
+                }
             }
             return false;
         }
@@ -295,7 +298,7 @@ public class HashMap<K, V> extends AbstractMap<K, V> implements Map<K, V>, Clone
         }
     }
 
-    /* ---------------- 静态方法区 -------------- */
+    /* ---------------- 静态方法 -------------- */
 
     /**
      * <p>
@@ -327,7 +330,12 @@ public class HashMap<K, V> extends AbstractMap<K, V> implements Map<K, V>, Clone
      * <p>
      * 注: {@code h >>> 16} 这一步是将高 16 位移到低 16 位上, 同时因为使用的是
      * 无符号右移所以右移后的数字的高 16 位都是 0, 0 与任何数做亦或操作的结果还是自
-     * 身, 因此最终的结果可以视为这个数高 16 位与低 16 位异或的结果.
+     * 身, 因此最终的结果可以视为这个数高 16 位与低 16 位异或的结果. 举例:
+     * <pre>
+     *     h = hashCode()    = 11111111 11111111 11110000 11101010
+     *       h >>> 16        = 00000000 00000000 11111111 11111111
+     * hash = h ^ (h >>> 16) = 11111111 11111111 00001111 00010101
+     * </pre>
      * </p>
      */
     static final int hash(Object key) {
@@ -346,27 +354,31 @@ public class HashMap<K, V> extends AbstractMap<K, V> implements Map<K, V>, Clone
         // 如果 x 没有实现 Comparable 接口, 则直接返回 null
         if (x instanceof Comparable) {
             Class<?> c;
-            Type[] ts, as;
+            Type[] ts;
+            Type[] as;
             Type t;
             ParameterizedType p;
             // 如果是字符串, 那么它一定是可比的, 直接返回
-            if ((c = x.getClass()) == String.class)
+            if ((c = x.getClass()) == String.class) {
                 return c;
+            }
             // 返回直接实现的接口, 包含泛型参数
             if ((ts = c.getGenericInterfaces()) != null) {
                 for (int i = 0; i < ts.length; ++i) {
-                    /*
-                     * 如果:
-                     * 1. 有泛型参数
-                     * 2. 泛型参数实现了 Comparable 接口
-                     * 3. 重写了 compareTo 方法
-                     * 那么就认为该对象是可比较的
-                     */
-                    if (((t = ts[i]) instanceof ParameterizedType) &&
-                            ((p = (ParameterizedType) t).getRawType() ==
-                                    Comparable.class) &&
-                            (as = p.getActualTypeArguments()) != null &&
-                            as.length == 1 && as[0] == c)
+                    // 如果满足以下条件就认为该对象是可比较的
+                    // 1. 有泛型参数
+                    t = ts[i];
+                    boolean hasParameterizedType = t instanceof ParameterizedType;
+
+                    // 2. 泛型参数实现了 Comparable 接口
+                    p = ((ParameterizedType) t);
+                    boolean implementationOfComparable = p.getRawType() == Comparable.class;
+
+                    // 3. 重写了 compareTo 方法
+                    as = p.getActualTypeArguments();
+                    boolean overrideCompareTo = as != null && as.length == 1 && as[0] == c;
+
+                    if (hasParameterizedType && implementationOfComparable && overrideCompareTo)
                         return c;
                 }
             }
@@ -396,7 +408,17 @@ public class HashMap<K, V> extends AbstractMap<K, V> implements Map<K, V>, Clone
     }
 
     /**
-     * Returns a power of two size for the given target capacity.
+     * 由于规定哈希表的容量必须是 2^n, 所以如果容量不满足要求, 那么需要将它转换为
+     * 离这个数最近的一个 2^n. 以 {@code cap = 10} 举个例子:
+     * <pre>
+     * cap  =     10   = 00000000 00001010
+     *  n   =  cap - 1 = 00000000 00001001
+     *  n  |=  n >>> 1 = 00000000 00001001 | 00000000 00000100 = 00000000 00001101
+     *  n  |=  n >>> 2 = 00000000 00001101 | 00000000 00000011 = 00000000 00001111
+     *  n  |=  n >>> 4 = 00000000 00001111 | 00000000 00000000 = 00000000 00001111
+     *  ... 因为和右移四位类似, 所以省略 8 和 16 的操作步骤 ...
+     *      result     = 00000000 00001111 + 00000000 00000001 = 00000000 00010000 = 16
+     * </pre>
      */
     static final int tableSizeFor(int cap) {
         int n = cap - 1;
@@ -408,105 +430,99 @@ public class HashMap<K, V> extends AbstractMap<K, V> implements Map<K, V>, Clone
         return (n < 0) ? 1 : (n >= MAXIMUM_CAPACITY) ? MAXIMUM_CAPACITY : n + 1;
     }
 
-    /* ---------------- Fields -------------- */
+    /* ---------------- 成员变量 -------------- */
 
     /**
-     * The table, initialized on first use, and resized as
-     * necessary. When allocated, length is always a power of two.
-     * (We also tolerate length zero in some operations to allow
-     * bootstrapping mechanics that are currently not needed.)
+     * 用于保存节点的数组, 它会在首次使用时进行扩容与初始化. 这个数组的长度应该
+     * 是 2^n, 长度为 0 在某些情况下也是允许的.
      */
     transient Node<K, V>[] table;
 
     /**
-     * Holds cached entrySet(). Note that AbstractMap fields are used
-     * for keySet() and values().
+     * 当调用 {@link #entrySet()} 方法时, 这个变量会被赋值, 用于缓存
      */
     transient Set<Map.Entry<K, V>> entrySet;
 
     /**
-     * The number of key-value mappings contained in this map.
+     * 当前哈希表中保存的键值对数量
      */
     transient int size;
 
     /**
-     * The number of times this HashMap has been structurally modified
-     * Structural modifications are those that change the number of mappings in
-     * the HashMap or otherwise modify its internal structure (e.g.,
-     * rehash).  This field is used to make iterators on Collection-views of
-     * the HashMap fail-fast.  (See ConcurrentModificationException).
+     * 这个变量用于记录哈希表结构发生变化的次数, 其中结构变化指的是某些
+     * 操作修改了键值对的数量或是修改了哈希表的内部结构(比如 rehash).
+     * 这个字段主要是用于迭代器的 {@code fail-fast} 机制.
+     *
+     * @see ConcurrentModificationException
      */
     transient int modCount;
 
     /**
-     * The next size value at which to resize (capacity * load factor).
+     * 容量 * 加载因子 = 阈值, 表示扩容的临界值, 当容量大于阈值时, 将
+     * 进行扩容. 当数组为 null 时, 这个字段表示数组的初始容量.
      *
      * @serial
      */
-    // (The javadoc description is true upon serialization.
-    // Additionally, if the table array has not been allocated, this
-    // field holds the initial array capacity, or zero signifying
-    // DEFAULT_INITIAL_CAPACITY.)
     int threshold;
 
     /**
-     * The load factor for the hash table.
+     * 加载因子, 默认值为 0.75
      *
      * @serial
      */
     final float loadFactor;
 
-    /* ---------------- Public operations -------------- */
+    /* ---------------- 公共方法 -------------- */
 
     /**
-     * Constructs an empty <tt>HashMap</tt> with the specified initial
-     * capacity and load factor.
+     * 根据指定的容量和加载因子创建一个新的哈希表.
      *
-     * @param initialCapacity the initial capacity
-     * @param loadFactor      the load factor
-     * @throws IllegalArgumentException if the initial capacity is negative
-     *                                  or the load factor is nonpositive
+     * @param initialCapacity 初始容量
+     * @param loadFactor      加载因子
+     * @throws IllegalArgumentException 如果容量为负或加载因子为负数
      */
     public HashMap(int initialCapacity, float loadFactor) {
-        if (initialCapacity < 0)
-            throw new IllegalArgumentException("Illegal initial capacity: " +
-                    initialCapacity);
-        if (initialCapacity > MAXIMUM_CAPACITY)
+        // 初始容量必须为正数
+        if (initialCapacity < 0) {
+            throw new IllegalArgumentException("Illegal initial capacity: " + initialCapacity);
+        }
+        // 如果初始容量大于 2^30, 那么使用 2^30 作为容量
+        if (initialCapacity > MAXIMUM_CAPACITY) {
             initialCapacity = MAXIMUM_CAPACITY;
-        if (loadFactor <= 0 || Float.isNaN(loadFactor))
-            throw new IllegalArgumentException("Illegal load factor: " +
-                    loadFactor);
+        }
+        // 加载因子不是正数或者不是数字都抛出异常
+        if (loadFactor <= 0 || Float.isNaN(loadFactor)) {
+            throw new IllegalArgumentException("Illegal load factor: " + loadFactor);
+        }
+        // 赋值加载因子
         this.loadFactor = loadFactor;
+        // 根据给定的容量计算一个满足要求的容量
         this.threshold = tableSizeFor(initialCapacity);
     }
 
     /**
-     * Constructs an empty <tt>HashMap</tt> with the specified initial
-     * capacity and the default load factor (0.75).
+     * 根据指定的容量创建一个新的哈希表, 加载因子默认取 0.75.
      *
-     * @param initialCapacity the initial capacity.
-     * @throws IllegalArgumentException if the initial capacity is negative.
+     * @param initialCapacity 初始容量
+     * @throws IllegalArgumentException 如果初始容量为负
      */
     public HashMap(int initialCapacity) {
         this(initialCapacity, DEFAULT_LOAD_FACTOR);
     }
 
     /**
-     * Constructs an empty <tt>HashMap</tt> with the default initial capacity
-     * (16) and the default load factor (0.75).
+     * 根据默认值创建一个新的哈希表, 容量取 16, 加载因子取 0.75.
      */
     public HashMap() {
-        this.loadFactor = DEFAULT_LOAD_FACTOR; // all other fields defaulted
+        this.loadFactor = DEFAULT_LOAD_FACTOR;
     }
 
     /**
-     * Constructs a new <tt>HashMap</tt> with the same mappings as the
-     * specified <tt>Map</tt>.  The <tt>HashMap</tt> is created with
-     * default load factor (0.75) and an initial capacity sufficient to
-     * hold the mappings in the specified <tt>Map</tt>.
+     * 根据一个已有的映射对象创建哈希表, 容量保证可以容纳指定的映射,
+     * 加载因子默认取 0.75.
      *
-     * @param m the map whose mappings are to be placed in this map
-     * @throws NullPointerException if the specified map is null
+     * @param m 一个映射
+     * @throws NullPointerException 如果这个对象是 null
      */
     public HashMap(Map<? extends K, ? extends V> m) {
         this.loadFactor = DEFAULT_LOAD_FACTOR;
@@ -514,23 +530,34 @@ public class HashMap<K, V> extends AbstractMap<K, V> implements Map<K, V>, Clone
     }
 
     /**
-     * Implements Map.putAll and Map constructor.
+     * 这个方法会被 {@link Map#putAll(Map)} 方法和构造器调用
      *
-     * @param m     the map
-     * @param evict false when initially constructing this map, else
-     *              true (relayed to method afterNodeInsertion).
+     * @param m     一个映射
+     * @param evict false 表示初次创建, 其余情况为 true
      */
     final void putMapEntries(Map<? extends K, ? extends V> m, boolean evict) {
+        // 映射的大小
         int s = m.size();
+        // 如果映射不为空
         if (s > 0) {
-            if (table == null) { // pre-size
+            // 如果数组为空, 那么要进行初始化
+            if (table == null) {
+                // 初始容量 = (需要存储的元素个数 / 加载因子) + 1
                 float ft = ((float) s / loadFactor) + 1.0F;
-                int t = ((ft < (float) MAXIMUM_CAPACITY) ?
-                        (int) ft : MAXIMUM_CAPACITY);
-                if (t > threshold)
+                // 如果计算出的容量大于最大容量, 则直接用最大容量
+                int t = ft < (float) MAXIMUM_CAPACITY ? (int) ft : MAXIMUM_CAPACITY;
+                // 当数组为空是, 阈值保存的的初始容量
+                // 如果超出了, 那么就需要根据现有容量得到一个新的阈值
+                if (t > threshold) {
                     threshold = tableSizeFor(t);
-            } else if (s > threshold)
+                }
+            }
+            // 如果数组不为空, 并且映射的大小大于阈值, 则需要扩容
+            else if (s > threshold) {
                 resize();
+            }
+
+            // 遍历 Map, 将键值对插入到哈希表中
             for (Map.Entry<? extends K, ? extends V> e : m.entrySet()) {
                 K key = e.getKey();
                 V value = e.getValue();
@@ -540,18 +567,18 @@ public class HashMap<K, V> extends AbstractMap<K, V> implements Map<K, V>, Clone
     }
 
     /**
-     * Returns the number of key-value mappings in this map.
+     * 返回哈希表中键值对的数量
      *
-     * @return the number of key-value mappings in this map
+     * @return 哈希表中键值对的数量
      */
     public int size() {
         return size;
     }
 
     /**
-     * Returns <tt>true</tt> if this map contains no key-value mappings.
+     * 如果哈希表中不存在键值对则返回 {@code true}, 否则返回 {@code false}
      *
-     * @return <tt>true</tt> if this map contains no key-value mappings
+     * @return 哈希表中是否存在键值对
      */
     public boolean isEmpty() {
         return size == 0;
