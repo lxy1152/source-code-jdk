@@ -587,7 +587,10 @@ public class HashMap<K, V> extends AbstractMap<K, V> implements Map<K, V>, Clone
     /**
      * 根据对应的键获取值, 如果没有相应的键那么会返回 null. 但是返回 null 并不一定就代表
      * 哈希表没有这个键, 也有可能这个键所对应的值本来就是 null. 使用
-     * {@link #containsKey(Object)} 可以区分这两种情况.
+     * {@link #containsKey(Object)} 可以区分这两种情况. {@link #get(Object)}
+     * 操作的流程图如下所示.
+     *
+     * <img src="../../../../../../../resources/xyz/lixiangyu/source/jdk/java/util/hashmap/get操作流程图.jpg">
      *
      * @see #put(Object, Object)
      */
@@ -664,6 +667,9 @@ public class HashMap<K, V> extends AbstractMap<K, V> implements Map<K, V>, Clone
 
     /**
      * 在哈希表中插入一个键值对, 如果键已存在, 那么它的值会被替换而不是新插入一个键值对.
+     * {@link #put(Object, Object)} 操作的流程图如下所示.
+     *
+     * <img src="../../../../../../../resources/xyz/lixiangyu/source/jdk/java/util/hashmap/put操作流程图.jpg">
      *
      * @param key   键
      * @param value 值
@@ -784,7 +790,10 @@ public class HashMap<K, V> extends AbstractMap<K, V> implements Map<K, V>, Clone
     /**
      * 如果 {@link #table} 数组为 null, 那么会对数组进行初始化, 否则会将数组
      * 扩大为原来的两倍. 另外, 由于每次扩容都是翻倍, 所以原来的元素要么是继续待在
-     * 原来的索引位置, 要么是偏移 2^n 个位置.
+     * 原来的索引位置, 要么是偏移 2^n 个位置. {@link #resize()} 操作的流程图
+     * 如下图所示.
+     *
+     * <img src="../../../../../../../resources/xyz/lixiangyu/source/jdk/java/util/hashmap/resize操作流程图.jpg">
      *
      * @return 初始化或扩容后的 {@link #table} 数组
      */
