@@ -948,24 +948,52 @@ public class HashMap<K, V> extends AbstractMap<K, V> implements Map<K, V>, Clone
      * @param hash 键的哈希值
      */
     final void treeifyBin(Node<K, V>[] tab, int hash) {
-        int n, index;
-        Node<K, V> e;
-        if (tab == null || (n = tab.length) < MIN_TREEIFY_CAPACITY)
+        // 数组的长度
+        int n = tab.length;
+        // 根据哈希值计算索引
+        int index = (n - 1) & hash;
+        // 获取对应索引位置的头节点
+        Node<K, V> e = tab[index];
+
+        // 如果数组为空或者数组长度小于64, 此时转换红黑树意义不大
+        // 直接进行扩容
+        if (tab == null || n < MIN_TREEIFY_CAPACITY) {
             resize();
-        else if ((e = tab[index = (n - 1) & hash]) != null) {
-            TreeNode<K, V> hd = null, tl = null;
+        }
+        // 在满足转换关系的情况下, 看一下头节点是否不为空
+        else if (e != null) {
+            // 红黑树的头尾节点
+            TreeNode<K, V> hd = null;
+            TreeNode<K, V> tl = null;
+
+            // 转换为双向链表
             do {
+                // 替换链表为树节点
                 TreeNode<K, V> p = replacementTreeNode(e, null);
-                if (tl == null)
+
+                // 红黑树的头节点
+                if (tl == null) {
                     hd = p;
+                }
+                // 插入一个尾节点
                 else {
                     p.prev = tl;
                     tl.next = p;
                 }
+
+                // 把当前节点作为尾节点
                 tl = p;
-            } while ((e = e.next) != null);
-            if ((tab[index] = hd) != null)
+
+                // 遍历链表
+                e = e.next;
+            } while (e != null);
+
+            // 用双向链表替换原来的链表
+            tab[index] = hd;
+            // 将双向链表转换为红黑树
+            if (tab[index] != null) {
                 hd.treeify(tab);
+            }
         }
     }
 
@@ -1001,46 +1029,82 @@ public class HashMap<K, V> extends AbstractMap<K, V> implements Map<K, V>, Clone
      * @return 要删除的那个节点(可能是 null)
      */
     final Node<K, V> removeNode(int hash, Object key, Object value, boolean matchValue, boolean movable) {
-        Node<K, V>[] tab;
-        Node<K, V> p;
-        int n, index;
-        if ((tab = table) != null && (n = tab.length) > 0 &&
-                (p = tab[index = (n - 1) & hash]) != null) {
-            Node<K, V> node = null, e;
-            K k;
-            V v;
-            if (p.hash == hash &&
-                    ((k = p.key) == key || (key != null && key.equals(k))))
+        // 当前数组的引用
+        Node<K, V>[] tab = table;
+        // 数组长度
+        int n = tab.length;
+        // 根据哈希计算索引
+        int index = (n - 1) & hash;
+        // 头节点
+        Node<K, V> p = tab[index];
+
+        // 如果数组不为空, 并且存在头节点
+        if (tab != null && n > 0 && p != null) {
+            // 保存要删除的那个节点
+            Node<K, V> node = null;
+            // 头节点的下一个节点
+            Node<K, V> e = p.next;
+            // 键
+            K k = p.key;
+
+            // 如果哈希值和键与参数相同, 那么这个节点就是要删除的节点
+            if (p.hash == hash && (k == key || (key != null && key.equals(k)))) {
                 node = p;
-            else if ((e = p.next) != null) {
-                if (p instanceof TreeNode)
+            }
+            // 如果链表除了头节点还有其他节点
+            else if (e != null) {
+                // 如果已经是红黑树了
+                // 那么从红黑树中查找节点
+                if (p instanceof TreeNode) {
                     node = ((TreeNode<K, V>) p).getTreeNode(hash, key);
+                }
+                // 遍历链表查找要删除的那个节点
                 else {
                     do {
-                        if (e.hash == hash &&
-                                ((k = e.key) == key ||
-                                        (key != null && key.equals(k)))) {
+                        k = e.key;
+                        if (e.hash == hash && (k == key || (key != null && key.equals(k)))) {
                             node = e;
                             break;
                         }
                         p = e;
-                    } while ((e = e.next) != null);
+                        e = e.next;
+                    } while (e != null);
                 }
             }
-            if (node != null && (!matchValue || (v = node.value) == value ||
-                    (value != null && value.equals(v)))) {
-                if (node instanceof TreeNode)
+
+            // 保存值
+            V v = node.value;
+            // 可以删除节点的情况有:
+            // 1. 不需要比较值
+            // 2. 需要比较值, 并且值相同
+            if (node != null && (!matchValue || v == value || (value != null && value.equals(v)))) {
+                // 如果是红黑树, 那么在红黑树中删除节点
+                if (node instanceof TreeNode) {
                     ((TreeNode<K, V>) node).removeTreeNode(this, tab, movable);
-                else if (node == p)
+                }
+                // 删除头节点
+                else if (node == p) {
                     tab[index] = node.next;
-                else
+                }
+                // 其他情况就直接修改 next
+                else {
                     p.next = node.next;
+                }
+
+                // 结构发生变化, 所以 modCount 要加一
                 ++modCount;
+                // 键值对的数量减一
                 --size;
+
+                // 为 LinkedHashMap 提供的钩子
                 afterNodeRemoval(node);
+
+                // 返回节点
                 return node;
             }
         }
+
+        // 没有删除, 返回 null
         return null;
     }
 
@@ -1113,27 +1177,63 @@ public class HashMap<K, V> extends AbstractMap<K, V> implements Map<K, V>, Clone
         return ks;
     }
 
+    /**
+     * 键集合类
+     *
+     * @see AbstractSet
+     */
     final class KeySet extends AbstractSet<K> {
+        /**
+         * 返回集合大小, 集合的大小和哈希表的 size 是相同的
+         *
+         * @return
+         */
         public final int size() {
             return size;
         }
 
+        /**
+         * 释放键, 调用 {@link HashMap#clear()}
+         */
         public final void clear() {
             HashMap.this.clear();
         }
 
+        /**
+         * 返回迭代器
+         *
+         * @return 迭代器
+         */
         public final Iterator<K> iterator() {
             return new KeyIterator();
         }
 
+        /**
+         * 判断集合中是否存在某个对象
+         *
+         * @param o 某个要判断的对象
+         * @return 集合中是否存在这个对象
+         */
         public final boolean contains(Object o) {
             return containsKey(o);
         }
 
+        /**
+         * 调用 {@link #removeNode(int, Object, Object, boolean, boolean)}
+         * 方法删除节点
+         *
+         * @param key 键
+         * @return 键所对应的旧值
+         */
         public final boolean remove(Object key) {
             return removeNode(hash(key), key, null, false, true) != null;
         }
 
+        /**
+         * 分割迭代器
+         *
+         * @return
+         */
         public final Spliterator<K> spliterator() {
             return new KeySpliterator<>(HashMap.this, 0, -1, 0, 0);
         }
