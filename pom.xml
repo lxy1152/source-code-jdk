@@ -7,7 +7,13 @@
     <groupId>xyz.lixiangyu.source</groupId>
     <artifactId>jdk</artifactId>
     <version>1.0.0</version>
-    <packaging>jar</packaging>
+
+    <modules>
+        <module>deploy</module>
+        <module>source</module>
+    </modules>
+
+    <packaging>pom</packaging>
 
     <properties>
         <maven.compiler.source>8</maven.compiler.source>
@@ -22,4 +28,20 @@
             <scope>test</scope>
         </dependency>
     </dependencies>
+
+    <build>
+        <finalName>rt-debug</finalName>
+
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-jar-plugin</artifactId>
+                <version>2.4</version>
+
+                <configuration>
+                    <outputDirectory>${java.home}/lib/endorsed/</outputDirectory>
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
 </project>

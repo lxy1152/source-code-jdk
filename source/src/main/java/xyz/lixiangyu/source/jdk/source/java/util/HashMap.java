@@ -27,6 +27,7 @@ package java.util;
 
 import java.io.IOException;
 import java.io.InvalidObjectException;
+import java.io.PrintStream;
 import java.io.Serializable;
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
@@ -47,8 +48,8 @@ import sun.misc.SharedSecrets;
  * <p>
  * 如果元素都是均匀放在桶中的, 那么 {@link #get(Object)} 和
  * {@link #put(Object, Object)} 操作的时间复杂度可以认为是 O(1). 另外由于迭代
- * 器遍历所需的时间与 {@linkplain #capacity() 桶的数量}加
- * {@linkplain #size 键值对的数量}成正比, 所以如果是需要考虑遍历性能的场景, 那么
+ * 器遍历所需的时间与 {@linkplain #capacity() 桶的数量} 加
+ * {@linkplain #size 键值对的数量} 成正比, 所以如果是需要考虑遍历性能的场景, 那么
  * 初始容量不应该设置太大(或者加载银子不应该设置太小).
  * </p>
  *
@@ -163,7 +164,7 @@ import sun.misc.SharedSecrets;
  * @since 1.2
  */
 public class HashMap<K, V> extends AbstractMap<K, V> implements Map<K, V>, Cloneable, Serializable {
-    /* ---------------- 静态变量 -------------- */
+    /* ---------------- 静态变量开始 -------------- */
 
     /**
      * 序列化 id
@@ -204,101 +205,12 @@ public class HashMap<K, V> extends AbstractMap<K, V> implements Map<K, V>, Clone
      */
     static final int MIN_TREEIFY_CAPACITY = 64;
 
-    /**
-     * 基础节点类
-     */
-    static class Node<K, V> implements Map.Entry<K, V> {
-        /**
-         * 哈希值
-         */
-        final int hash;
+    /* ---------------- 静态变量结束 -------------- */
 
-        /**
-         * 键
-         */
-        final K key;
 
-        /**
-         * 值
-         */
-        V value;
 
-        /**
-         * 下一节点
-         */
-        Node<K, V> next;
 
-        /**
-         * 默认构造器, 为上述四个变量指定初始值
-         *
-         * @param hash  哈希值
-         * @param key   键
-         * @param value 值
-         * @param next  下一节点
-         */
-        Node(int hash, K key, V value, Node<K, V> next) {
-            this.hash = hash;
-            this.key = key;
-            this.value = value;
-            this.next = next;
-        }
-
-        /**
-         * 重写 {@link Object#toString()} 方法, 输出 {@link #key}
-         * 和{@link #value}
-         *
-         * @return 形如 key=value 样式的字符串
-         */
-        public final String toString() {
-            return key + "=" + value;
-        }
-
-        /**
-         * 重写 {@link Object#hashCode()} 方法, 将键和值得哈希值进行
-         * 异或得到的值作为哈希值
-         *
-         * @return 哈希值
-         */
-        public final int hashCode() {
-            return Objects.hashCode(key) ^ Objects.hashCode(value);
-        }
-
-        /**
-         * 重写 {@link Object#equals(Object)} 方法, 通过比较键和值判
-         * 断两个节点是否相同
-         *
-         * @param o 另一个节点
-         * @return 两节点是否相同
-         */
-        public final boolean equals(Object o) {
-            if (o == this) {
-                return true;
-            }
-            if (o instanceof Map.Entry) {
-                Map.Entry<?, ?> e = (Map.Entry<?, ?>) o;
-                if (Objects.equals(key, e.getKey()) && Objects.equals(value, e.getValue())) {
-                    return true;
-                }
-            }
-            return false;
-        }
-
-        public final K getKey() {
-            return key;
-        }
-
-        public final V getValue() {
-            return value;
-        }
-
-        public final V setValue(V newValue) {
-            V oldValue = value;
-            value = newValue;
-            return oldValue;
-        }
-    }
-
-    /* ---------------- 静态方法 -------------- */
+    /* ---------------- 静态方法开始 -------------- */
 
     /**
      * <p>
@@ -402,9 +314,6 @@ public class HashMap<K, V> extends AbstractMap<K, V> implements Map<K, V>, Clone
         } else {
             return ((Comparable) k).compareTo(x);
         }
-        // 源代码不太清晰, 看上面的
-        // return (x == null || x.getClass() != kc ? 0 :
-        //         ((Comparable) k).compareTo(x));
     }
 
     /**
@@ -430,11 +339,137 @@ public class HashMap<K, V> extends AbstractMap<K, V> implements Map<K, V>, Clone
         return (n < 0) ? 1 : (n >= MAXIMUM_CAPACITY) ? MAXIMUM_CAPACITY : n + 1;
     }
 
-    /* ---------------- 成员变量 -------------- */
+    /* ---------------- 静态方法结束 -------------- */
+
+
+
+
+    /* ---------------- 静态内部类 Node 开始 -------------- */
+
+    /**
+     * 基础节点类
+     *
+     * @see Map.Entry
+     */
+    static class Node<K, V> implements Map.Entry<K, V> {
+        /* ---------------- 成员变量开始 -------------- */
+
+        /**
+         * 哈希值
+         */
+        final int hash;
+
+        /**
+         * 键
+         */
+        final K key;
+
+        /**
+         * 值
+         */
+        V value;
+
+        /**
+         * 下一节点
+         */
+        Node<K, V> next;
+
+        /* ---------------- 成员变量结束 -------------- */
+
+
+        /* ---------------- 构造器开始 -------------- */
+
+        /**
+         * 默认构造器, 为上述四个变量指定初始值
+         *
+         * @param hash  哈希值
+         * @param key   键
+         * @param value 值
+         * @param next  下一节点
+         */
+        Node(int hash, K key, V value, Node<K, V> next) {
+            this.hash = hash;
+            this.key = key;
+            this.value = value;
+            this.next = next;
+        }
+
+        /* ---------------- 构造器结束 -------------- */
+
+        /* ---------------- Object 类重写方法开始 -------------- */
+
+        /**
+         * 重写 {@link Object#toString()} 方法, 输出 {@link #key}
+         * 和{@link #value}
+         *
+         * @return 形如 key=value 样式的字符串
+         */
+        public final String toString() {
+            return "{" + key + " = " + value + "}";
+        }
+
+        /**
+         * 重写 {@link Object#hashCode()} 方法, 将键和值得哈希值进行
+         * 异或得到的值作为哈希值
+         *
+         * @return 哈希值
+         */
+        public final int hashCode() {
+            return Objects.hashCode(key) ^ Objects.hashCode(value);
+        }
+
+        /**
+         * 重写 {@link Object#equals(Object)} 方法, 通过比较键和值判
+         * 断两个节点是否相同
+         *
+         * @param o 另一个节点
+         * @return 两节点是否相同
+         */
+        public final boolean equals(Object o) {
+            if (o == this) {
+                return true;
+            }
+            if (o instanceof Map.Entry) {
+                Map.Entry<?, ?> e = (Map.Entry<?, ?>) o;
+                if (Objects.equals(key, e.getKey()) && Objects.equals(value, e.getValue())) {
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        /* ---------------- Object 类重写方法结束 -------------- */
+
+
+        /* ---------------- get/set 方法开始 -------------- */
+
+        public final K getKey() {
+            return key;
+        }
+
+        public final V getValue() {
+            return value;
+        }
+
+        public final V setValue(V newValue) {
+            V oldValue = value;
+            value = newValue;
+            return oldValue;
+        }
+
+        /* ---------------- get/set 方法结束 -------------- */
+    }
+
+    /* ---------------- 静态内部类 Node 结束 -------------- */
+
+
+
+
+    /* ---------------- 成员变量开始 -------------- */
 
     /**
      * 用于保存节点的数组, 它会在首次使用时进行扩容与初始化. 这个数组的长度应该
-     * 是 2^n, 长度为 0 在某些情况下也是允许的.
+     * 是 2^n, 长度为 0 在某些情况下也是允许的
      */
     transient Node<K, V>[] table;
 
@@ -451,7 +486,7 @@ public class HashMap<K, V> extends AbstractMap<K, V> implements Map<K, V>, Clone
     /**
      * 这个变量用于记录哈希表结构发生变化的次数, 其中结构变化指的是某些
      * 操作修改了键值对的数量或是修改了哈希表的内部结构(比如 rehash).
-     * 这个字段主要是用于迭代器的 {@code fail-fast} 机制.
+     * 这个字段主要是用于迭代器的 {@code fail-fast} 机制
      *
      * @see ConcurrentModificationException
      */
@@ -459,7 +494,7 @@ public class HashMap<K, V> extends AbstractMap<K, V> implements Map<K, V>, Clone
 
     /**
      * 容量 * 加载因子 = 阈值, 表示扩容的临界值, 当容量大于阈值时, 将
-     * 进行扩容. 当数组为 null 时, 这个字段表示数组的初始容量.
+     * 进行扩容. 当数组为 null 时, 这个字段表示数组的初始容量
      *
      * @serial
      */
@@ -472,10 +507,15 @@ public class HashMap<K, V> extends AbstractMap<K, V> implements Map<K, V>, Clone
      */
     final float loadFactor;
 
-    /* ---------------- 公共方法 -------------- */
+    /* ---------------- 成员变量结束 -------------- */
+
+
+
+
+    /* ---------------- 构造器开始 -------------- */
 
     /**
-     * 根据指定的容量和加载因子创建一个新的哈希表.
+     * 根据指定的容量和加载因子创建一个新的哈希表
      *
      * @param initialCapacity 初始容量
      * @param loadFactor      加载因子
@@ -501,7 +541,7 @@ public class HashMap<K, V> extends AbstractMap<K, V> implements Map<K, V>, Clone
     }
 
     /**
-     * 根据指定的容量创建一个新的哈希表, 加载因子默认取 0.75.
+     * 根据指定的容量创建一个新的哈希表, 加载因子默认取 0.75
      *
      * @param initialCapacity 初始容量
      * @throws IllegalArgumentException 如果初始容量为负
@@ -519,7 +559,7 @@ public class HashMap<K, V> extends AbstractMap<K, V> implements Map<K, V>, Clone
 
     /**
      * 根据一个已有的映射对象创建哈希表, 容量保证可以容纳指定的映射,
-     * 加载因子默认取 0.75.
+     * 加载因子默认取 0.75
      *
      * @param m 一个映射
      * @throws NullPointerException 如果这个对象是 null
@@ -529,48 +569,19 @@ public class HashMap<K, V> extends AbstractMap<K, V> implements Map<K, V>, Clone
         putMapEntries(m, false);
     }
 
-    /**
-     * 这个方法会被 {@link Map#putAll(Map)} 方法和构造器调用
-     *
-     * @param m     一个映射
-     * @param evict false 表示初次创建, 其余情况为 true
-     */
-    final void putMapEntries(Map<? extends K, ? extends V> m, boolean evict) {
-        // 映射的大小
-        int s = m.size();
-        // 如果映射不为空
-        if (s > 0) {
-            // 如果数组为空, 那么要进行初始化
-            if (table == null) {
-                // 初始容量 = (需要存储的元素个数 / 加载因子) + 1
-                float ft = ((float) s / loadFactor) + 1.0F;
-                // 如果计算出的容量大于最大容量, 则直接用最大容量
-                int t = ft < (float) MAXIMUM_CAPACITY ? (int) ft : MAXIMUM_CAPACITY;
-                // 当数组为空是, 阈值保存的的初始容量
-                // 如果超出了, 那么就需要根据现有容量得到一个新的阈值
-                if (t > threshold) {
-                    threshold = tableSizeFor(t);
-                }
-            }
-            // 如果数组不为空, 并且映射的大小大于阈值, 则需要扩容
-            else if (s > threshold) {
-                resize();
-            }
+    /* ---------------- 构造器结束 -------------- */
 
-            // 遍历 Map, 将键值对插入到哈希表中
-            for (Map.Entry<? extends K, ? extends V> e : m.entrySet()) {
-                K key = e.getKey();
-                V value = e.getValue();
-                putVal(hash(key), key, value, false, evict);
-            }
-        }
-    }
+
+
+
+    /* ---------------- public 方法开始 -------------- */
 
     /**
      * 返回哈希表中键值对的数量
      *
      * @return 哈希表中键值对的数量
      */
+    @Override
     public int size() {
         return size;
     }
@@ -580,6 +591,7 @@ public class HashMap<K, V> extends AbstractMap<K, V> implements Map<K, V>, Clone
      *
      * @return 哈希表中是否存在键值对
      */
+    @Override
     public boolean isEmpty() {
         return size == 0;
     }
@@ -588,12 +600,17 @@ public class HashMap<K, V> extends AbstractMap<K, V> implements Map<K, V>, Clone
      * 根据对应的键获取值, 如果没有相应的键那么会返回 null. 但是返回 null 并不一定就代表
      * 哈希表没有这个键, 也有可能这个键所对应的值本来就是 null. 使用
      * {@link #containsKey(Object)} 可以区分这两种情况. {@link #get(Object)}
-     * 操作的流程图如下所示.
+     * 操作的流程图如下所示.<br><br>
      *
      * <img src="../../../../../../../resources/xyz/lixiangyu/source/jdk/java/util/hashmap/get操作流程图.jpg">
+     * <br>
      *
+     * @param key 键
+     * @return 键对应的值
      * @see #put(Object, Object)
+     * @see #getNode(int, Object)
      */
+    @Override
     public V get(Object key) {
         // 根据哈希和键获取节点
         Node<K, V> e = getNode(hash(key), key);
@@ -602,399 +619,21 @@ public class HashMap<K, V> extends AbstractMap<K, V> implements Map<K, V>, Clone
     }
 
     /**
-     * {@link #get(Object)} 以及和它有关的方法会调用这个方法获得一个链表/树节点
-     *
-     * @param hash 键的哈希值
-     * @param key  键
-     * @return 节点(可能为 null)
-     */
-    final Node<K, V> getNode(int hash, Object key) {
-        // 指向当前数组
-        Node<K, V>[] tab = table;
-        // 当前数组长度
-        int n = tab.length;
-
-        // 通过 (n - 1) & hash 计算索引得到头节点
-        Node<K, V> first = tab[(n - 1) & hash];
-        // 遍历过程中的当前节点
-        Node<K, V> e;
-
-        // 某个节点的键
-        K k;
-
-        // 如果数组不为空, 且头结点不为空
-        if (tab != null && n > 0 && first != null) {
-            // 获取头结点的键
-            k = first.key;
-            // 如果哈希相同, 并且键也相同, 那么头节点就是要找的节点
-            if (first.hash == hash && (k == key || (key != null && key.equals(k)))) {
-                return first;
-            }
-
-            // 如果不是头节点那么就需要进行遍历
-            e = first.next;
-            if (e != null) {
-                // 如果链表已经转换为了红黑树, 那么在红黑树中进行查找
-                if (first instanceof TreeNode) {
-                    return ((TreeNode<K, V>) first).getTreeNode(hash, key);
-                }
-                // 遍历链表
-                do {
-                    // 如果哈希相同, 并且键也相同, 那么这个节点就是要找的节点
-                    k = e.key;
-                    if (e.hash == hash && (k == key || (key != null && key.equals(k)))) {
-                        return e;
-                    }
-                    e = e.next;
-                } while (e != null);
-            }
-        }
-
-        // 如果最后找不到, 返回 null
-        return null;
-    }
-
-    /**
-     * 如果通过指定的键能查找到一个节点, 那么就会 {@code true}, 否则返回 {@code false}.
-     *
-     * @param key 键
-     * @return true: 如果包含键所对应的值; false: 不包含这个键所对应的值
-     * key.
-     */
-    public boolean containsKey(Object key) {
-        return getNode(hash(key), key) != null;
-    }
-
-    /**
      * 在哈希表中插入一个键值对, 如果键已存在, 那么它的值会被替换而不是新插入一个键值对.
-     * {@link #put(Object, Object)} 操作的流程图如下所示.
+     * {@link #put(Object, Object)} 操作的流程图如下所示.<br><br>
      *
      * <img src="../../../../../../../resources/xyz/lixiangyu/source/jdk/java/util/hashmap/put操作流程图.jpg">
+     * <br>
      *
      * @param key   键
      * @param value 值
      * @return 这个键所对应得旧值, 如果不存在这个键, 那么会返回 null, 但是返回 null
      * 也可能代表键原本所对应的值就是 null
+     * @see #get(Object)
+     * @see #putVal(int, Object, Object, boolean, boolean)
      */
     public V put(K key, V value) {
         return putVal(hash(key), key, value, false, true);
-    }
-
-    /**
-     * {@link #put(Object, Object)} 以及相关的操作和调用这个方法
-     *
-     * @param hash         键的哈希值
-     * @param key          键
-     * @param value        值
-     * @param onlyIfAbsent 如果是 true, 那么不会改变已有的值
-     * @param evict        如果是 false, 表示哈希表处于创建过程
-     * @return 键所对应的旧值(可能为 null)
-     */
-    final V putVal(int hash, K key, V value, boolean onlyIfAbsent, boolean evict) {
-        // 指向当前数组
-        Node<K, V>[] tab = table;
-        // 当前数组长度
-        int n = tab.length;
-
-        // 如果当前数组未初始化, 那么首先需要进行扩容
-        // 从这里也可以看到哈希表是延迟加载的
-        if (tab == null || n == 0) {
-            tab = resize();
-            n = tab.length;
-        }
-
-        // 索引
-        int i = (n - 1) & hash;
-        // 指向某个节点
-        Node<K, V> p = tab[i];
-
-        // 如果头节点为空, 那么需要新创建一个节点作为头节点
-        // 此时这个头节点的下一节点为 null
-        if (p == null) {
-            tab[i] = newNode(hash, key, value, null);
-        }
-        // 如果头节点不为空, 证明此时存在链表或红黑树
-        else {
-            // 保存结果节点
-            Node<K, V> e;
-            // 保存某个键
-            K k = p.key;
-
-            // 如果头节点的哈希相等, 且键也相等, 那么头节点就是结果
-            if (p.hash == hash && (k == key || (key != null && key.equals(k)))) {
-                e = p;
-            }
-            // 如果头节点不满足要求, 并且链表已经转换为了红黑树
-            // 那么在红黑树中查找所需节点
-            else if (p instanceof TreeNode) {
-                e = ((TreeNode<K, V>) p).putTreeVal(this, tab, hash, key, value);
-            }
-            // 在链表中查找节点
-            else {
-                // binCount 是在统计链表长度
-                for (int binCount = 0; ; ++binCount) {
-                    // 移动节点指针
-                    e = p.next;
-                    // 如果已经到了链表末尾
-                    if (e == null) {
-                        // 新建一个节点用于保存这个键值对
-                        p.next = newNode(hash, key, value, null);
-                        // 如果当前链表长度大于树化阈值, 那么需要尝试尝试将链表转为红黑树
-                        // 因为 binCount 是从 0 开始的, 所以此处要减一
-                        if (binCount >= TREEIFY_THRESHOLD - 1) {
-                            treeifyBin(tab, hash);
-                        }
-                        break;
-                    }
-                    // 如果遍历过程中某个节点满足要求就推出循环
-                    if (e.hash == hash && ((k = e.key) == key || (key != null && key.equals(k)))) {
-                        break;
-                    }
-                    // 移动头指针
-                    p = e;
-                }
-            }
-
-            // 如果确实存在键所对应的节点
-            if (e != null) {
-                // 旧值
-                V oldValue = e.value;
-                // 如果允许改变旧值或者旧值本身就是 null, 更新旧值
-                if (!onlyIfAbsent || oldValue == null)
-                    e.value = value;
-                // 给 LinkedHashMap 提供的钩子
-                // 表示 put 操作修改了某节点的值
-                afterNodeAccess(e);
-                // 把旧值返回
-                return oldValue;
-            }
-        }
-
-        // 当修改原节点时的操作是直接返回, 所以如果能执行到这里,
-        // 那么一定是新创建了节点, 即结构发生了变化
-        ++modCount;
-
-        // 如果插入以后大于阈值, 那么进行扩容
-        if (++size > threshold) {
-            resize();
-        }
-
-        // 给 LinkedHashMap 提供的钩子
-        // 表示 put 操作是新创建了节点
-        afterNodeInsertion(evict);
-
-        // 由于是新创建的节点, 自然不存在旧值, 返回 null
-        return null;
-    }
-
-    /**
-     * 如果 {@link #table} 数组为 null, 那么会对数组进行初始化, 否则会将数组
-     * 扩大为原来的两倍. 另外, 由于每次扩容都是翻倍, 所以原来的元素要么是继续待在
-     * 原来的索引位置, 要么是偏移 2^n 个位置. {@link #resize()} 操作的流程图
-     * 如下图所示.
-     *
-     * <img src="../../../../../../../resources/xyz/lixiangyu/source/jdk/java/util/hashmap/resize操作流程图.jpg">
-     *
-     * @return 初始化或扩容后的 {@link #table} 数组
-     */
-    final Node<K, V>[] resize() {
-        // 指向当前数组, 表示扩容前的数组
-        Node<K, V>[] oldTab = table;
-        // 旧数组的长度
-        int oldCap = (oldTab == null) ? 0 : oldTab.length;
-        // 旧阈值
-        int oldThr = threshold;
-
-        // 新的容量
-        int newCap = 0;
-        // 新的阈值
-        int newThr = 0;
-
-        // 如果旧表不为空, 对它进行扩容
-        if (oldCap > 0) {
-            // 旧容量已经达到最大, 阈值直接取 Integer 的最大值并返回旧表
-            if (oldCap >= MAXIMUM_CAPACITY) {
-                threshold = Integer.MAX_VALUE;
-                return oldTab;
-            }
-            // 将新容量和新阈值扩大为两倍
-            else if ((newCap = oldCap << 1) < MAXIMUM_CAPACITY && oldCap >= DEFAULT_INITIAL_CAPACITY) {
-                newThr = oldThr << 1; // double threshold
-            }
-        }
-        // 如果旧表没有初始化, 但阈值不为 0, 那么将新容量设置为旧阈值
-        // 这种情况出现在使用 HashMap(int, float) 构造器时
-        else if (oldThr > 0) {
-            newCap = oldThr;
-        }
-        // 如果容量和阈值都没有指定, 那么给它们设置默认值
-        else {
-            newCap = DEFAULT_INITIAL_CAPACITY;
-            newThr = (int) (DEFAULT_LOAD_FACTOR * DEFAULT_INITIAL_CAPACITY);
-        }
-
-        // 如果阈值没有赋值, 对它进行赋值
-        // 这部分的逻辑对应上面的 else if (oldThr > 0) 条件
-        if (newThr == 0) {
-            float ft = (float) newCap * loadFactor;
-            if (newCap < MAXIMUM_CAPACITY && ft < (float) MAXIMUM_CAPACITY) {
-                newThr = (int) ft;
-            } else {
-                newThr = Integer.MAX_VALUE;
-            }
-        }
-
-        // 设置新的阈值
-        threshold = newThr;
-
-        // 根据新的容量创建一个的数组
-        @SuppressWarnings({"rawtypes", "unchecked"})
-        Node<K, V>[] newTab = (Node<K, V>[]) new Node[newCap];
-        // 将 table 指向新创建的数组
-        table = newTab;
-
-        // 如果旧表中还有数据, 那么需要将数据做迁移
-        if (oldTab != null) {
-            // 遍历旧表
-            for (int j = 0; j < oldCap; ++j) {
-                // 获得头节点
-                Node<K, V> e = oldTab[j];
-
-                // 如果头节点不为空, 证明存在链表或者红黑树
-                if (e != null) {
-                    // 释放旧表中的头节点
-                    oldTab[j] = null;
-
-                    // 如果只有一个头节点
-                    if (e.next == null) {
-                        // 计算这个节点在新表中的索引位置
-                        // 索引计算公式: (n - 1) & hash
-                        int index = (newCap - 1) & e.hash;
-                        newTab[index] = e;
-                    }
-                    // 如果是红黑树, 通过红黑树的 split 方法重新 rehash
-                    else if (e instanceof TreeNode) {
-                        ((TreeNode<K, V>) e).split(this, newTab, j, oldCap);
-                    }
-                    // 如果是链表
-                    else {
-                        // 通过下面节点变量保证节点之间顺序
-                        // 存储与原索引位置相同的节点
-                        Node<K, V> loHead = null;
-                        Node<K, V> loTail = null;
-                        // 存储与原索引位置差 oldCap 的节点
-                        Node<K, V> hiHead = null;
-                        Node<K, V> hiTail = null;
-                        Node<K, V> next;
-
-                        do {
-                            // 使 next 指向当前节点的下一节点
-                            next = e.next;
-
-                            // 因为 oldCap 一定是 2^n, 假设是 16, 那么它的二进制表示是
-                            // 0001 0000, e.hash 和它做与运算的结果为 0, 只有在
-                            // e.hash = xxx0 xxxx 的情况下才会出现. 新数组的大小是 32,
-                            // 二进制为 0010 0000, 索引计算是需要减 1, 即 0001 1111,
-                            // 索引计算出的位置是一样的. 而这两个二进制数的区别仅在一个高位
-                            // 的 1, 即 oldCap
-                            int t = e.hash & oldCap;
-
-                            // 如果索引位置相同, 就放在 lo 链表中, 否则放到 hi 链表中
-                            if (t == 0) {
-                                // 第一次时需要设置头节点, 其他情况就直接设置尾结点就可以了
-                                if (loTail == null) {
-                                    loHead = e;
-                                } else {
-                                    loTail.next = e;
-                                }
-                                loTail = e;
-                            } else {
-                                if (hiTail == null) {
-                                    hiHead = e;
-                                } else {
-                                    hiTail.next = e;
-                                }
-                                hiTail = e;
-                            }
-
-                            // 移动指向当前节点的指针
-                            e = next;
-                        } while (e != null);
-
-                        // 保存链表到数组中
-                        if (loTail != null) {
-                            loTail.next = null;
-                            newTab[j] = loHead;
-                        }
-
-                        if (hiTail != null) {
-                            hiTail.next = null;
-                            newTab[j + oldCap] = hiHead;
-                        }
-                    }
-                }
-            }
-        }
-
-        // 初始化或扩容成功后返回新表
-        return newTab;
-    }
-
-    /**
-     * 根据指定的哈希计算出一个索引, 如果哈希表足够大, 那么就把链表转化为红黑树, 否则
-     * 只是进行扩容
-     *
-     * @param tab  数组
-     * @param hash 键的哈希值
-     */
-    final void treeifyBin(Node<K, V>[] tab, int hash) {
-        // 数组的长度
-        int n = tab.length;
-        // 根据哈希值计算索引
-        int index = (n - 1) & hash;
-        // 获取对应索引位置的头节点
-        Node<K, V> e = tab[index];
-
-        // 如果数组为空或者数组长度小于64, 此时转换红黑树意义不大
-        // 直接进行扩容
-        if (tab == null || n < MIN_TREEIFY_CAPACITY) {
-            resize();
-        }
-        // 在满足转换关系的情况下, 看一下头节点是否不为空
-        else if (e != null) {
-            // 红黑树的头尾节点
-            TreeNode<K, V> hd = null;
-            TreeNode<K, V> tl = null;
-
-            // 转换为双向链表
-            do {
-                // 替换链表为树节点
-                TreeNode<K, V> p = replacementTreeNode(e, null);
-
-                // 红黑树的头节点
-                if (tl == null) {
-                    hd = p;
-                }
-                // 插入一个尾节点
-                else {
-                    p.prev = tl;
-                    tl.next = p;
-                }
-
-                // 把当前节点作为尾节点
-                tl = p;
-
-                // 遍历链表
-                e = e.next;
-            } while (e != null);
-
-            // 用双向链表替换原来的链表
-            tab[index] = hd;
-            // 将双向链表转换为红黑树
-            if (tab[index] != null) {
-                hd.treeify(tab);
-            }
-        }
     }
 
     /**
@@ -1008,104 +647,37 @@ public class HashMap<K, V> extends AbstractMap<K, V> implements Map<K, V>, Clone
     }
 
     /**
+     * 如果通过指定的键能查找到一个节点, 那么就会 {@code true}, 否则返回 {@code false}
+     *
+     * @param key 键
+     * @return true: 如果包含键所对应的值; false: 不包含这个键所对应的值
+     */
+    public boolean containsKey(Object key) {
+        return getNode(hash(key), key) != null;
+    }
+
+    /**
      * 根据指定的键在哈希表中删除键值对
      *
      * @param key 要删除键值对的键
      * @return 键所对应的值(可能为 null)
      */
+    @Override
     public V remove(Object key) {
         Node<K, V> e = removeNode(hash(key), key, null, false, true);
         return e == null ? null : e.value;
     }
 
     /**
-     * {@link #remove(Object, Object)} 方法以及它相关的方法会调用这个方法
+     * 根据给定的键和值移除键值对
      *
-     * @param hash       键的哈希值
-     * @param key        键
-     * @param value      值
-     * @param matchValue 如果是 true, 则需要比较值是否相同
-     * @param movable    如果是 false, 那么在删除是不会移动其他节点
-     * @return 要删除的那个节点(可能是 null)
+     * @param key   键
+     * @param value 值
+     * @return 是否成功删除
      */
-    final Node<K, V> removeNode(int hash, Object key, Object value, boolean matchValue, boolean movable) {
-        // 当前数组的引用
-        Node<K, V>[] tab = table;
-        // 数组长度
-        int n = tab.length;
-        // 根据哈希计算索引
-        int index = (n - 1) & hash;
-        // 头节点
-        Node<K, V> p = tab[index];
-
-        // 如果数组不为空, 并且存在头节点
-        if (tab != null && n > 0 && p != null) {
-            // 保存要删除的那个节点
-            Node<K, V> node = null;
-            // 头节点的下一个节点
-            Node<K, V> e = p.next;
-            // 键
-            K k = p.key;
-
-            // 如果哈希值和键与参数相同, 那么这个节点就是要删除的节点
-            if (p.hash == hash && (k == key || (key != null && key.equals(k)))) {
-                node = p;
-            }
-            // 如果链表除了头节点还有其他节点
-            else if (e != null) {
-                // 如果已经是红黑树了
-                // 那么从红黑树中查找节点
-                if (p instanceof TreeNode) {
-                    node = ((TreeNode<K, V>) p).getTreeNode(hash, key);
-                }
-                // 遍历链表查找要删除的那个节点
-                else {
-                    do {
-                        k = e.key;
-                        if (e.hash == hash && (k == key || (key != null && key.equals(k)))) {
-                            node = e;
-                            break;
-                        }
-                        p = e;
-                        e = e.next;
-                    } while (e != null);
-                }
-            }
-
-            // 保存值
-            V v = node.value;
-            // 可以删除节点的情况有:
-            // 1. 不需要比较值
-            // 2. 需要比较值, 并且值相同
-            if (node != null && (!matchValue || v == value || (value != null && value.equals(v)))) {
-                // 如果是红黑树, 那么在红黑树中删除节点
-                if (node instanceof TreeNode) {
-                    ((TreeNode<K, V>) node).removeTreeNode(this, tab, movable);
-                }
-                // 删除头节点
-                else if (node == p) {
-                    tab[index] = node.next;
-                }
-                // 其他情况就直接修改 next
-                else {
-                    p.next = node.next;
-                }
-
-                // 结构发生变化, 所以 modCount 要加一
-                ++modCount;
-                // 键值对的数量减一
-                --size;
-
-                // 为 LinkedHashMap 提供的钩子
-                afterNodeRemoval(node);
-
-                // 返回节点
-                return node;
-            }
-        }
-
-        // 没有删除, 返回 null
-        return null;
+    @Override
+    public boolean remove(Object key, Object value) {
+        return removeNode(hash(key), key, value, true, true) != null;
     }
 
     /**
@@ -1178,96 +750,17 @@ public class HashMap<K, V> extends AbstractMap<K, V> implements Map<K, V>, Clone
     }
 
     /**
-     * 键集合类
+     * 返回一个值组成的集合, 任何对哈希表值的修改, 都会被反映到它的上面. 如果在迭代
+     * 过程中哈希表发生了变化(除了迭代器提供的 {@link Iterator#remove()} 方法),
+     * 那么迭代器返回的结果是不确定的. 这个集合支持删除操作, 比如:
+     * {@link Iterator#remove()}, {@link Collection#remove(Object)},
+     * {@link Collection#removeAll(Collection)},
+     * {@link Collection#retainAll(Collection)},
+     * {@link Collection#clear()}. 但是不支持
+     * {@link Collection#add(Object)},
+     * {@link Collection#addAll(Collection)} 操作.
      *
-     * @see AbstractSet
-     */
-    final class KeySet extends AbstractSet<K> {
-        /**
-         * 返回集合大小, 集合的大小和哈希表的 size 是相同的
-         *
-         * @return
-         */
-        public final int size() {
-            return size;
-        }
-
-        /**
-         * 释放键, 调用 {@link HashMap#clear()}
-         */
-        public final void clear() {
-            HashMap.this.clear();
-        }
-
-        /**
-         * 返回迭代器
-         *
-         * @return 迭代器
-         */
-        public final Iterator<K> iterator() {
-            return new KeyIterator();
-        }
-
-        /**
-         * 判断集合中是否存在某个对象
-         *
-         * @param o 某个要判断的对象
-         * @return 集合中是否存在这个对象
-         */
-        public final boolean contains(Object o) {
-            return containsKey(o);
-        }
-
-        /**
-         * 调用 {@link #removeNode(int, Object, Object, boolean, boolean)}
-         * 方法删除节点
-         *
-         * @param key 键
-         * @return 键所对应的旧值
-         */
-        public final boolean remove(Object key) {
-            return removeNode(hash(key), key, null, false, true) != null;
-        }
-
-        /**
-         * 分割迭代器
-         *
-         * @return
-         */
-        public final Spliterator<K> spliterator() {
-            return new KeySpliterator<>(HashMap.this, 0, -1, 0, 0);
-        }
-
-        public final void forEach(Consumer<? super K> action) {
-            Node<K, V>[] tab;
-            if (action == null)
-                throw new NullPointerException();
-            if (size > 0 && (tab = table) != null) {
-                int mc = modCount;
-                for (int i = 0; i < tab.length; ++i) {
-                    for (Node<K, V> e = tab[i]; e != null; e = e.next)
-                        action.accept(e.key);
-                }
-                if (modCount != mc)
-                    throw new ConcurrentModificationException();
-            }
-        }
-    }
-
-    /**
-     * Returns a {@link Collection} view of the values contained in this map.
-     * The collection is backed by the map, so changes to the map are
-     * reflected in the collection, and vice-versa.  If the map is
-     * modified while an iteration over the collection is in progress
-     * (except through the iterator's own <tt>remove</tt> operation),
-     * the results of the iteration are undefined.  The collection
-     * supports element removal, which removes the corresponding
-     * mapping from the map, via the <tt>Iterator.remove</tt>,
-     * <tt>Collection.remove</tt>, <tt>removeAll</tt>,
-     * <tt>retainAll</tt> and <tt>clear</tt> operations.  It does not
-     * support the <tt>add</tt> or <tt>addAll</tt> operations.
-     *
-     * @return a view of the values contained in this map
+     * @return 一个键组成的结合
      */
     public Collection<V> values() {
         Collection<V> vs = values;
@@ -1278,133 +771,52 @@ public class HashMap<K, V> extends AbstractMap<K, V> implements Map<K, V>, Clone
         return vs;
     }
 
-    final class Values extends AbstractCollection<V> {
-        public final int size() {
-            return size;
+    /**
+     * 返回一个由键值对组合组成的集合, 任何对哈希表值的修改, 都会被反映到它的上面.
+     * 如果在迭代过程中哈希表发生了变化(除了迭代器提供的 {@link Iterator#remove()},
+     * 或者是 {@link java.util.Map.Entry#setValue(Object)} 方法),
+     * 那么迭代器返回的结果是不确定的. 这个集合支持删除操作, 比如:
+     * {@link Iterator#remove()}, {@link Set#remove(Object)},
+     * {@link Set#removeAll(Collection)}, {@link Set#retainAll(Collection)},
+     * {@link Set#clear()}. 但是不支持 {@link Set#add(Object)},
+     * {@link Set#addAll(Collection)} 操作.
+     *
+     * @return 一个由键值对组合组成的集合
+     */
+    public Set<Map.Entry<K, V>> entrySet() {
+        Set<Map.Entry<K, V>> es = entrySet;
+        if (es == null) {
+            entrySet = new EntrySet();
+            es = entrySet;
         }
-
-        public final void clear() {
-            HashMap.this.clear();
-        }
-
-        public final Iterator<V> iterator() {
-            return new ValueIterator();
-        }
-
-        public final boolean contains(Object o) {
-            return containsValue(o);
-        }
-
-        public final Spliterator<V> spliterator() {
-            return new ValueSpliterator<>(HashMap.this, 0, -1, 0, 0);
-        }
-
-        public final void forEach(Consumer<? super V> action) {
-            Node<K, V>[] tab;
-            if (action == null)
-                throw new NullPointerException();
-            if (size > 0 && (tab = table) != null) {
-                int mc = modCount;
-                for (int i = 0; i < tab.length; ++i) {
-                    for (Node<K, V> e = tab[i]; e != null; e = e.next)
-                        action.accept(e.value);
-                }
-                if (modCount != mc)
-                    throw new ConcurrentModificationException();
-            }
-        }
+        return es;
     }
 
     /**
-     * Returns a {@link Set} view of the mappings contained in this map.
-     * The set is backed by the map, so changes to the map are
-     * reflected in the set, and vice-versa.  If the map is modified
-     * while an iteration over the set is in progress (except through
-     * the iterator's own <tt>remove</tt> operation, or through the
-     * <tt>setValue</tt> operation on a map entry returned by the
-     * iterator) the results of the iteration are undefined.  The set
-     * supports element removal, which removes the corresponding
-     * mapping from the map, via the <tt>Iterator.remove</tt>,
-     * <tt>Set.remove</tt>, <tt>removeAll</tt>, <tt>retainAll</tt> and
-     * <tt>clear</tt> operations.  It does not support the
-     * <tt>add</tt> or <tt>addAll</tt> operations.
+     * 获取某个键对应的值, 如果不存在则返回默认值
      *
-     * @return a set view of the mappings contained in this map
+     * @param key          键
+     * @param defaultValue 默认值
+     * @return 键对应的值或者是默认值
      */
-    public Set<Map.Entry<K, V>> entrySet() {
-        Set<Map.Entry<K, V>> es;
-        return (es = entrySet) == null ? (entrySet = new EntrySet()) : es;
-    }
-
-    final class EntrySet extends AbstractSet<Map.Entry<K, V>> {
-        public final int size() {
-            return size;
-        }
-
-        public final void clear() {
-            HashMap.this.clear();
-        }
-
-        public final Iterator<Map.Entry<K, V>> iterator() {
-            return new EntryIterator();
-        }
-
-        public final boolean contains(Object o) {
-            if (!(o instanceof Map.Entry))
-                return false;
-            Map.Entry<?, ?> e = (Map.Entry<?, ?>) o;
-            Object key = e.getKey();
-            Node<K, V> candidate = getNode(hash(key), key);
-            return candidate != null && candidate.equals(e);
-        }
-
-        public final boolean remove(Object o) {
-            if (o instanceof Map.Entry) {
-                Map.Entry<?, ?> e = (Map.Entry<?, ?>) o;
-                Object key = e.getKey();
-                Object value = e.getValue();
-                return removeNode(hash(key), key, value, true, true) != null;
-            }
-            return false;
-        }
-
-        public final Spliterator<Map.Entry<K, V>> spliterator() {
-            return new EntrySpliterator<>(HashMap.this, 0, -1, 0, 0);
-        }
-
-        public final void forEach(Consumer<? super Map.Entry<K, V>> action) {
-            Node<K, V>[] tab;
-            if (action == null)
-                throw new NullPointerException();
-            if (size > 0 && (tab = table) != null) {
-                int mc = modCount;
-                for (int i = 0; i < tab.length; ++i) {
-                    for (Node<K, V> e = tab[i]; e != null; e = e.next)
-                        action.accept(e);
-                }
-                if (modCount != mc)
-                    throw new ConcurrentModificationException();
-            }
-        }
-    }
-
-    // Overrides of JDK8 Map extension methods
-
     @Override
     public V getOrDefault(Object key, V defaultValue) {
-        Node<K, V> e;
-        return (e = getNode(hash(key), key)) == null ? defaultValue : e.value;
+        Node<K, V> e = getNode(hash(key), key);
+        return e == null ? defaultValue : e.value;
     }
 
+    /**
+     * 在键不存在时做插入操作, 在键已存在时不进行修改
+     *
+     * @param key   键
+     * @param value 值
+     * @return 旧值
+     */
     @Override
     public V putIfAbsent(K key, V value) {
         return putVal(hash(key), key, value, true, true);
     }
 
-    @Override
-    public boolean remove(Object key, Object value) {
-        return removeNode(hash(key), key, value, true, true) != null;
-    }
 
     @Override
     public boolean replace(K key, V oldValue, V newValue) {
@@ -1679,16 +1091,672 @@ public class HashMap<K, V> extends AbstractMap<K, V> implements Map<K, V>, Clone
         return result;
     }
 
-    // These methods are also used when serializing HashSets
+    @Override
+    public String getMapInfo(boolean outputEachNode) {
+        StringBuffer stringBuffer = new StringBuffer();
+        stringBuffer.append("---------- HashMap 信息输出开始 ----------\n");
+
+        // 1. HashMap 当前的容量
+        stringBuffer.append("1. 容量: ").append(capacity()).append("\n");
+        // 2. HashMap 的加载因子大小
+        stringBuffer.append("2. 加载因子: ").append(loadFactor()).append("\n");
+        // 3. HashMap 总键值对的数量
+        stringBuffer.append("3. 键值对数量: ").append(size()).append("\n");
+        // 4. HashMap 阈值大小
+        stringBuffer.append("4. 阈值大小: ").append(threshold).append("\n");
+        // 5. HashMap 维护的 table 数组的长度
+        stringBuffer.append("5. 数组长度: ").append(table == null ? 0 : table.length).append("\n");
+        // 6. table 数组各个索引位置的头节点信息
+        stringBuffer.append("6. 数组各个头节点的信息: ");
+        if (table == null || table.length == 0) {
+            stringBuffer.append("数组为空\n");
+        } else {
+            stringBuffer.append("[");
+            for (int i = 0; i < table.length; i++) {
+                Node<K, V> node = table[i];
+                if (node == null) {
+                    stringBuffer.append("null");
+                } else if (node instanceof TreeNode) {
+                    stringBuffer.append("红黑树");
+                } else {
+                    stringBuffer.append("链表");
+                }
+                if (i != table.length - 1) {
+                    stringBuffer.append(", ");
+                }
+            }
+            stringBuffer.append("]\n");
+        }
+
+        // 7. 展示指定索引区间的链表或红黑树的详细信息
+        if (outputEachNode) {
+            stringBuffer.append("7. 指定索引区间的链表或红黑树信息: \n");
+            int i = 0;
+            while (table != null && i < table.length) {
+                stringBuffer.append("(").append(i + 1).append(") ");
+                stringBuffer.append("索引 ").append(i).append(" 处为: ");
+                Node<K, V> node = table[i];
+                if (node == null) {
+                    stringBuffer.append("null");
+                } else if (node instanceof TreeNode) {
+                    stringBuffer.append("红黑树");
+                } else {
+                    stringBuffer.append("链表, 此处的哈希值为 ")
+                                .append(hash(node.key))
+                                .append(" , 它的结构如下所示 ↓\n");
+                    while (node != null) {
+                        stringBuffer.append(node);
+                        if (node.next != null) {
+                            stringBuffer.append(" -> ");
+                        }
+                        node = node.next;
+                    }
+                }
+                stringBuffer.append("\n");
+                i++;
+            }
+        }
+
+        stringBuffer.append("---------- HashMap 信息输出结束 ----------\n");
+
+        return stringBuffer.toString();
+    }
+
+    /* ---------------- default 方法开始 -------------- */
+
+    /**
+     * {@link #get(Object)} 以及和它有关的方法会调用这个方法获得一个链表/树节点
+     *
+     * @param hash 键的哈希值
+     * @param key  键
+     * @return 节点(可能为 null)
+     */
+    final Node<K, V> getNode(int hash, Object key) {
+        // 指向当前数组
+        Node<K, V>[] tab = table;
+        // 当前数组长度
+        int n;
+
+        // 通过 (n - 1) & hash 计算索引得到头节点
+        Node<K, V> first;
+        // 遍历过程中的当前节点
+        Node<K, V> e;
+
+        // 某个节点的键
+        K k;
+
+        // 如果数组不为空, 且头结点不为空
+        if (tab != null && (n = tab.length) > 0 && (first = tab[(n - 1) & hash]) != null) {
+            // 获取头结点的键
+            k = first.key;
+            // 如果哈希相同, 并且键也相同, 那么头节点就是要找的节点
+            if (first.hash == hash && (k == key || (key != null && key.equals(k)))) {
+                return first;
+            }
+
+            // 如果不是头节点那么就需要进行遍历
+            e = first.next;
+            if (e != null) {
+                // 如果链表已经转换为了红黑树, 那么在红黑树中进行查找
+                if (first instanceof TreeNode) {
+                    return ((TreeNode<K, V>) first).getTreeNode(hash, key);
+                }
+                // 遍历链表
+                do {
+                    // 如果哈希相同, 并且键也相同, 那么这个节点就是要找的节点
+                    k = e.key;
+                    if (e.hash == hash && (k == key || (key != null && key.equals(k)))) {
+                        return e;
+                    }
+                    e = e.next;
+                } while (e != null);
+            }
+        }
+
+        // 如果最后找不到, 返回 null
+        return null;
+    }
+
+    /**
+     * {@link #put(Object, Object)} 以及相关的操作和调用这个方法
+     *
+     * @param hash         键的哈希值
+     * @param key          键
+     * @param value        值
+     * @param onlyIfAbsent 如果是 true, 那么不会改变已有的值
+     * @param evict        如果是 false, 表示哈希表处于创建过程
+     * @return 键所对应的旧值(可能为 null)
+     */
+    final V putVal(int hash, K key, V value, boolean onlyIfAbsent, boolean evict) {
+        // 指向当前数组
+        Node<K, V>[] tab = table;
+        // 当前数组长度
+        int n;
+
+        // 如果当前数组未初始化, 那么首先需要进行扩容
+        // 从这里也可以看到哈希表是延迟加载的
+        if (tab == null || (n = tab.length) == 0) {
+            tab = resize();
+            n = tab.length;
+        }
+
+        // 索引
+        int i = (n - 1) & hash;
+        // 指向某个节点
+        Node<K, V> p = tab[i];
+
+        // 如果头节点为空, 那么需要新创建一个节点作为头节点
+        // 此时这个头节点的下一节点为 null
+        if (p == null) {
+            tab[i] = newNode(hash, key, value, null);
+        }
+        // 如果头节点不为空, 证明此时存在链表或红黑树
+        else {
+            // 保存结果节点
+            Node<K, V> e;
+            // 保存某个键
+            K k = p.key;
+
+            // 如果头节点的哈希相等, 且键也相等, 那么头节点就是结果
+            if (p.hash == hash && (k == key || (key != null && key.equals(k)))) {
+                e = p;
+            }
+            // 如果头节点不满足要求, 并且链表已经转换为了红黑树
+            // 那么在红黑树中查找所需节点
+            else if (p instanceof TreeNode) {
+                e = ((TreeNode<K, V>) p).putTreeVal(this, tab, hash, key, value);
+            }
+            // 在链表中查找节点
+            else {
+                // binCount 是在统计链表长度
+                for (int binCount = 0; ; ++binCount) {
+                    // 移动节点指针
+                    e = p.next;
+                    // 如果已经到了链表末尾
+                    if (e == null) {
+                        // 新建一个节点用于保存这个键值对
+                        p.next = newNode(hash, key, value, null);
+                        // 如果当前链表长度大于树化阈值, 那么需要尝试尝试将链表转为红黑树
+                        // 因为 binCount 是从 0 开始的, 所以此处要减一
+                        if (binCount >= TREEIFY_THRESHOLD - 1) {
+                            treeifyBin(tab, hash);
+                        }
+                        break;
+                    }
+                    // 如果遍历过程中某个节点满足要求就推出循环
+                    if (e.hash == hash && ((k = e.key) == key || (key != null && key.equals(k)))) {
+                        break;
+                    }
+                    // 移动头指针
+                    p = e;
+                }
+            }
+
+            // 如果确实存在键所对应的节点
+            if (e != null) {
+                // 旧值
+                V oldValue = e.value;
+                // 如果允许改变旧值或者旧值本身就是 null, 更新旧值
+                if (!onlyIfAbsent || oldValue == null) {
+                    e.value = value;
+                }
+                // 给 LinkedHashMap 提供的钩子
+                // 表示 put 操作修改了某节点的值
+                afterNodeAccess(e);
+                // 把旧值返回
+                return oldValue;
+            }
+        }
+
+        // 当修改原节点时的操作是直接返回, 所以如果能执行到这里,
+        // 那么一定是新创建了节点, 即结构发生了变化
+        ++modCount;
+
+        // 如果插入以后大于阈值, 那么进行扩容
+        if (++size > threshold) {
+            resize();
+        }
+
+        // 给 LinkedHashMap 提供的钩子
+        // 表示 put 操作是新创建了节点
+        afterNodeInsertion(evict);
+
+        // 由于是新创建的节点, 自然不存在旧值, 返回 null
+        return null;
+    }
+
+    /**
+     * 这个方法会被 {@link Map#putAll(Map)} 方法和构造器调用
+     *
+     * @param m     一个映射
+     * @param evict false 表示初次创建, 其余情况为 true
+     */
+    final void putMapEntries(Map<? extends K, ? extends V> m, boolean evict) {
+        // 映射的大小
+        int s = m.size();
+        // 如果映射不为空
+        if (s > 0) {
+            // 如果数组为空, 那么要进行初始化
+            if (table == null) {
+                // 初始容量 = (需要存储的元素个数 / 加载因子) + 1
+                float ft = ((float) s / loadFactor) + 1.0F;
+                // 如果计算出的容量大于最大容量, 则直接用最大容量
+                int t = ft < (float) MAXIMUM_CAPACITY ? (int) ft : MAXIMUM_CAPACITY;
+                // 当数组为空是, 阈值保存的的初始容量
+                // 如果超出了, 那么就需要根据现有容量得到一个新的阈值
+                if (t > threshold) {
+                    threshold = tableSizeFor(t);
+                }
+            }
+            // 如果数组不为空, 并且映射的大小大于阈值, 则需要扩容
+            else if (s > threshold) {
+                resize();
+            }
+
+            // 遍历 Map, 将键值对插入到哈希表中
+            for (Map.Entry<? extends K, ? extends V> e : m.entrySet()) {
+                K key = e.getKey();
+                V value = e.getValue();
+                putVal(hash(key), key, value, false, evict);
+            }
+        }
+    }
+
+    /**
+     * {@link #remove(Object, Object)} 方法以及它相关的方法会调用这个方法
+     *
+     * @param hash       键的哈希值
+     * @param key        键
+     * @param value      值
+     * @param matchValue 如果是 true, 则需要比较值是否相同
+     * @param movable    如果是 false, 那么在删除是不会移动其他节点
+     * @return 要删除的那个节点(可能是 null)
+     */
+    final Node<K, V> removeNode(int hash, Object key, Object value, boolean matchValue, boolean movable) {
+        // 当前数组的引用
+        Node<K, V>[] tab = table;
+        // 数组长度
+        int n;
+        // 根据哈希计算索引
+        int index;
+        // 头节点
+        Node<K, V> p;
+
+        // 如果数组不为空, 并且存在头节点
+        if (tab != null && (n = tab.length) > 0 && (p = tab[index = (n - 1) & hash]) != null) {
+            // 保存要删除的那个节点
+            Node<K, V> node = null;
+            // 头节点的下一个节点
+            Node<K, V> e = p.next;
+            // 键
+            K k = p.key;
+
+            // 如果哈希值和键与参数相同, 那么这个节点就是要删除的节点
+            if (p.hash == hash && (k == key || (key != null && key.equals(k)))) {
+                node = p;
+            }
+            // 如果链表除了头节点还有其他节点
+            else if (e != null) {
+                // 如果已经是红黑树了
+                // 那么从红黑树中查找节点
+                if (p instanceof TreeNode) {
+                    node = ((TreeNode<K, V>) p).getTreeNode(hash, key);
+                }
+                // 遍历链表查找要删除的那个节点
+                else {
+                    do {
+                        k = e.key;
+                        if (e.hash == hash && (k == key || (key != null && key.equals(k)))) {
+                            node = e;
+                            break;
+                        }
+                        p = e;
+                        e = e.next;
+                    } while (e != null);
+                }
+            }
+
+            // 保存值
+            V v;
+            // 可以删除节点的情况有:
+            // 1. 不需要比较值
+            // 2. 需要比较值, 并且值相同
+            if (node != null && (!matchValue || (v = node.value) == value || (value != null && value.equals(v)))) {
+                // 如果是红黑树, 那么在红黑树中删除节点
+                if (node instanceof TreeNode) {
+                    ((TreeNode<K, V>) node).removeTreeNode(this, tab, movable);
+                }
+                // 删除头节点
+                else if (node == p) {
+                    tab[index] = node.next;
+                }
+                // 其他情况就直接修改 next
+                else {
+                    p.next = node.next;
+                }
+
+                // 结构发生变化, 所以 modCount 要加一
+                ++modCount;
+                // 键值对的数量减一
+                --size;
+
+                // 为 LinkedHashMap 提供的钩子
+                afterNodeRemoval(node);
+
+                // 返回节点
+                return node;
+            }
+        }
+
+        // 没有删除, 返回 null
+        return null;
+    }
+
+    /**
+     * 如果 {@link #table} 数组为 null, 那么会对数组进行初始化, 否则会将数组
+     * 扩大为原来的两倍. 另外, 由于每次扩容都是翻倍, 所以原来的元素要么是继续待在
+     * 原来的索引位置, 要么是偏移 2^n 个位置. {@link #resize()} 操作的流程图
+     * 如下图所示.
+     *
+     * <img src="../../../../../../../resources/xyz/lixiangyu/source/jdk/java/util/hashmap/resize操作流程图.jpg">
+     *
+     * @return 初始化或扩容后的 {@link #table} 数组
+     */
+    final Node<K, V>[] resize() {
+        // 指向当前数组, 表示扩容前的数组
+        Node<K, V>[] oldTab = table;
+        // 旧数组的长度
+        int oldCap = (oldTab == null) ? 0 : oldTab.length;
+        // 旧阈值
+        int oldThr = threshold;
+
+        // 新的容量
+        int newCap = 0;
+        // 新的阈值
+        int newThr = 0;
+
+        // 如果旧表不为空, 对它进行扩容
+        if (oldCap > 0) {
+            // 旧容量已经达到最大, 阈值直接取 Integer 的最大值并返回旧表
+            if (oldCap >= MAXIMUM_CAPACITY) {
+                threshold = Integer.MAX_VALUE;
+                return oldTab;
+            }
+            // 将新容量和新阈值扩大为两倍
+            else if ((newCap = oldCap << 1) < MAXIMUM_CAPACITY && oldCap >= DEFAULT_INITIAL_CAPACITY) {
+                newThr = oldThr << 1; // double threshold
+            }
+        }
+        // 如果旧表没有初始化, 但阈值不为 0, 那么将新容量设置为旧阈值
+        // 这种情况出现在使用 HashMap(int, float) 构造器时
+        else if (oldThr > 0) {
+            newCap = oldThr;
+        }
+        // 如果容量和阈值都没有指定, 那么给它们设置默认值
+        else {
+            newCap = DEFAULT_INITIAL_CAPACITY;
+            newThr = (int) (DEFAULT_LOAD_FACTOR * DEFAULT_INITIAL_CAPACITY);
+        }
+
+        // 如果阈值没有赋值, 对它进行赋值
+        // 这部分的逻辑对应上面的 else if (oldThr > 0) 条件
+        if (newThr == 0) {
+            float ft = (float) newCap * loadFactor;
+            if (newCap < MAXIMUM_CAPACITY && ft < (float) MAXIMUM_CAPACITY) {
+                newThr = (int) ft;
+            } else {
+                newThr = Integer.MAX_VALUE;
+            }
+        }
+
+        // 设置新的阈值
+        threshold = newThr;
+
+        // 根据新的容量创建一个的数组
+        @SuppressWarnings({"rawtypes", "unchecked"})
+        Node<K, V>[] newTab = (Node<K, V>[]) new Node[newCap];
+        // 将 table 指向新创建的数组
+        table = newTab;
+
+        // 如果旧表中还有数据, 那么需要将数据做迁移
+        if (oldTab != null) {
+            // 遍历旧表
+            for (int j = 0; j < oldCap; ++j) {
+                // 获得头节点
+                Node<K, V> e = oldTab[j];
+
+                // 如果头节点不为空, 证明存在链表或者红黑树
+                if (e != null) {
+                    // 释放旧表中的头节点
+                    oldTab[j] = null;
+
+                    // 如果只有一个头节点
+                    if (e.next == null) {
+                        // 计算这个节点在新表中的索引位置
+                        // 索引计算公式: (n - 1) & hash
+                        int index = (newCap - 1) & e.hash;
+                        newTab[index] = e;
+                    }
+                    // 如果是红黑树, 通过红黑树的 split 方法重新 rehash
+                    else if (e instanceof TreeNode) {
+                        ((TreeNode<K, V>) e).split(this, newTab, j, oldCap);
+                    }
+                    // 如果是链表
+                    else {
+                        // 通过下面节点变量保证节点之间顺序
+                        // 存储与原索引位置相同的节点
+                        Node<K, V> loHead = null;
+                        Node<K, V> loTail = null;
+                        // 存储与原索引位置差 oldCap 的节点
+                        Node<K, V> hiHead = null;
+                        Node<K, V> hiTail = null;
+                        Node<K, V> next;
+
+                        do {
+                            // 使 next 指向当前节点的下一节点
+                            next = e.next;
+
+                            // 因为 oldCap 一定是 2^n, 假设是 16, 那么它的二进制表示是
+                            // 0001 0000, e.hash 和它做与运算的结果为 0, 只有在
+                            // e.hash = xxx0 xxxx 的情况下才会出现. 新数组的大小是 32,
+                            // 二进制为 0010 0000, 索引计算是需要减 1, 即 0001 1111,
+                            // 索引计算出的位置是一样的. 而这两个二进制数的区别仅在一个高位
+                            // 的 1, 即 oldCap
+                            int t = e.hash & oldCap;
+
+                            // 如果索引位置相同, 就放在 lo 链表中, 否则放到 hi 链表中
+                            if (t == 0) {
+                                // 第一次时需要设置头节点, 其他情况就直接设置尾结点就可以了
+                                if (loTail == null) {
+                                    loHead = e;
+                                } else {
+                                    loTail.next = e;
+                                }
+                                loTail = e;
+                            } else {
+                                if (hiTail == null) {
+                                    hiHead = e;
+                                } else {
+                                    hiTail.next = e;
+                                }
+                                hiTail = e;
+                            }
+
+                            // 移动指向当前节点的指针
+                            e = next;
+                        } while (e != null);
+
+                        // 保存链表到数组中
+                        if (loTail != null) {
+                            loTail.next = null;
+                            newTab[j] = loHead;
+                        }
+
+                        if (hiTail != null) {
+                            hiTail.next = null;
+                            newTab[j + oldCap] = hiHead;
+                        }
+                    }
+                }
+            }
+        }
+
+        // 初始化或扩容成功后返回新表
+        return newTab;
+    }
+
+    /**
+     * 根据指定的哈希计算出一个索引, 如果哈希表足够大, 那么就把链表转化为红黑树, 否则
+     * 只是进行扩容
+     *
+     * @param tab  数组
+     * @param hash 键的哈希值
+     */
+    final void treeifyBin(Node<K, V>[] tab, int hash) {
+        // 数组的长度
+        int n = tab.length;
+        // 根据哈希值计算索引
+        int index = (n - 1) & hash;
+        // 获取对应索引位置的头节点
+        Node<K, V> e = tab[index];
+
+        // 如果数组为空或者数组长度小于64, 此时转换红黑树意义不大
+        // 直接进行扩容
+        if (tab == null || n < MIN_TREEIFY_CAPACITY) {
+            resize();
+        }
+        // 在满足转换关系的情况下, 看一下头节点是否不为空
+        else if (e != null) {
+            // 红黑树的头尾节点
+            TreeNode<K, V> hd = null;
+            TreeNode<K, V> tl = null;
+
+            // 转换为双向链表
+            do {
+                // 替换链表为树节点
+                TreeNode<K, V> p = replacementTreeNode(e, null);
+
+                // 红黑树的头节点
+                if (tl == null) {
+                    hd = p;
+                }
+                // 插入一个尾节点
+                else {
+                    p.prev = tl;
+                    tl.next = p;
+                }
+
+                // 把当前节点作为尾节点
+                tl = p;
+
+                // 遍历链表
+                e = e.next;
+            } while (e != null);
+
+            // 用双向链表替换原来的链表
+            tab[index] = hd;
+            // 将双向链表转换为红黑树
+            if (tab[index] != null) {
+                hd.treeify(tab);
+            }
+        }
+    }
+
+    /**
+     * 返回加载因子的大小
+     *
+     * @return 加载因子的大小
+     */
     final float loadFactor() {
         return loadFactor;
     }
 
+    /**
+     * 返回哈希表当前的容量
+     *
+     * @return
+     */
     final int capacity() {
-        return (table != null) ? table.length :
-                (threshold > 0) ? threshold :
-                        DEFAULT_INITIAL_CAPACITY;
+        int capacity = 0;
+        if (table != null) {
+            capacity = table.length;
+        } else if (threshold > 0) {
+            capacity = threshold;
+        } else {
+            capacity = DEFAULT_INITIAL_CAPACITY;
+        }
+        return capacity;
     }
+
+    /* ------------------------------------------------------------ */
+    // LinkedHashMap support
+
+
+    /*
+     * The following package-protected methods are designed to be
+     * overridden by LinkedHashMap, but not by any other subclass.
+     * Nearly all other internal methods are also package-protected
+     * but are declared final, so can be used by LinkedHashMap, view
+     * classes, and HashSet.
+     */
+
+    // Create a regular (non-tree) node
+    Node<K, V> newNode(int hash, K key, V value, Node<K, V> next) {
+        return new Node<>(hash, key, value, next);
+    }
+
+    // For conversion from TreeNodes to plain nodes
+    Node<K, V> replacementNode(Node<K, V> p, Node<K, V> next) {
+        return new Node<>(p.hash, p.key, p.value, next);
+    }
+
+    // Create a tree bin node
+    TreeNode<K, V> newTreeNode(int hash, K key, V value, Node<K, V> next) {
+        return new TreeNode<>(hash, key, value, next);
+    }
+
+    // For treeifyBin
+    TreeNode<K, V> replacementTreeNode(Node<K, V> p, Node<K, V> next) {
+        return new TreeNode<>(p.hash, p.key, p.value, next);
+    }
+
+    /**
+     * Reset to initial default state.  Called by clone and readObject.
+     */
+    void reinitialize() {
+        table = null;
+        entrySet = null;
+        keySet = null;
+        values = null;
+        modCount = 0;
+        threshold = 0;
+        size = 0;
+    }
+
+    // Callbacks to allow LinkedHashMap post-actions
+    void afterNodeAccess(Node<K, V> p) {
+    }
+
+    void afterNodeInsertion(boolean evict) {
+    }
+
+    void afterNodeRemoval(Node<K, V> p) {
+    }
+
+    // Called only from writeObject, to ensure compatible ordering.
+    void internalWriteEntries(java.io.ObjectOutputStream s) throws IOException {
+        Node<K, V>[] tab;
+        if (size > 0 && (tab = table) != null) {
+            for (int i = 0; i < tab.length; ++i) {
+                for (Node<K, V> e = tab[i]; e != null; e = e.next) {
+                    s.writeObject(e.key);
+                    s.writeObject(e.value);
+                }
+            }
+        }
+    }
+
+    /* ---------------- default 方法结束 -------------- */
 
     /**
      * Save the state of the <tt>HashMap</tt> instance to a stream (i.e.,
@@ -2087,69 +2155,293 @@ public class HashMap<K, V> extends AbstractMap<K, V> implements Map<K, V>, Clone
         }
     }
 
-    /* ------------------------------------------------------------ */
-    // LinkedHashMap support
 
 
-    /*
-     * The following package-protected methods are designed to be
-     * overridden by LinkedHashMap, but not by any other subclass.
-     * Nearly all other internal methods are also package-protected
-     * but are declared final, so can be used by LinkedHashMap, view
-     * classes, and HashSet.
+    /* ---------------- 内部类开始 -------------- */
+
+    /**
+     * 键集合类
+     *
+     * @see AbstractSet
      */
+    final class KeySet extends AbstractSet<K> {
+        /**
+         * 返回集合大小, 集合的大小和哈希表的 size 是相同的
+         *
+         * @return
+         */
+        public final int size() {
+            return size;
+        }
 
-    // Create a regular (non-tree) node
-    Node<K, V> newNode(int hash, K key, V value, Node<K, V> next) {
-        return new Node<>(hash, key, value, next);
-    }
+        /**
+         * 释放键, 调用 {@link HashMap#clear()}
+         */
+        public final void clear() {
+            HashMap.this.clear();
+        }
 
-    // For conversion from TreeNodes to plain nodes
-    Node<K, V> replacementNode(Node<K, V> p, Node<K, V> next) {
-        return new Node<>(p.hash, p.key, p.value, next);
-    }
+        /**
+         * 返回迭代器
+         *
+         * @return 迭代器
+         */
+        public final Iterator<K> iterator() {
+            return new KeyIterator();
+        }
 
-    // Create a tree bin node
-    TreeNode<K, V> newTreeNode(int hash, K key, V value, Node<K, V> next) {
-        return new TreeNode<>(hash, key, value, next);
-    }
+        /**
+         * 判断集合中是否存在某个对象
+         *
+         * @param o 某个要判断的对象
+         * @return 集合中是否存在这个对象
+         */
+        public final boolean contains(Object o) {
+            return containsKey(o);
+        }
 
-    // For treeifyBin
-    TreeNode<K, V> replacementTreeNode(Node<K, V> p, Node<K, V> next) {
-        return new TreeNode<>(p.hash, p.key, p.value, next);
+        /**
+         * 调用 {@link #removeNode(int, Object, Object, boolean, boolean)}
+         * 方法删除节点
+         *
+         * @param key 键
+         * @return 键所对应的旧值
+         */
+        public final boolean remove(Object key) {
+            return removeNode(hash(key), key, null, false, true) != null;
+        }
+
+        /**
+         * 可分割迭代器
+         *
+         * @return 一个可分割迭代器
+         */
+        public final Spliterator<K> spliterator() {
+            return new KeySpliterator<>(HashMap.this, 0, -1, 0, 0);
+        }
+
+        /**
+         * 针对每个元素所做的操作
+         *
+         * @param action 要执行的操作
+         */
+        public final void forEach(Consumer<? super K> action) {
+            // 操作不能为空
+            if (action == null) {
+                throw new NullPointerException();
+            }
+
+            // 指向当前数组
+            Node<K, V>[] tab = table;
+
+            // 遍历数组
+            if (size > 0 && tab != null) {
+                // 保存 modCount 的值
+                int mc = modCount;
+
+                // 遍历链表
+                for (int i = 0; i < tab.length; ++i) {
+                    for (Node<K, V> e = tab[i]; e != null; e = e.next) {
+                        // 传入键并执行相应操作
+                        action.accept(e.key);
+                    }
+                }
+
+                // 支持 fail-fast 机制
+                if (modCount != mc) {
+                    throw new ConcurrentModificationException();
+                }
+            }
+        }
     }
 
     /**
-     * Reset to initial default state.  Called by clone and readObject.
+     * 一个键组成的集合
+     *
+     * @see AbstractCollection
      */
-    void reinitialize() {
-        table = null;
-        entrySet = null;
-        keySet = null;
-        values = null;
-        modCount = 0;
-        threshold = 0;
-        size = 0;
+    final class Values extends AbstractCollection<V> {
+        /**
+         * 这个集合的大小, 它的大小与当前哈希表的的 {@linkplain HashMap#size 键值对数量}
+         * 是相同的
+         *
+         * @return 集合的大小
+         */
+        public final int size() {
+            return size;
+        }
+
+        /**
+         * 清空键值对
+         */
+        public final void clear() {
+            HashMap.this.clear();
+        }
+
+        /**
+         * 返回这个集合的迭代器
+         *
+         * @return 迭代器
+         */
+        public final Iterator<V> iterator() {
+            return new ValueIterator();
+        }
+
+        /**
+         * 判断指定的对象在集合中是否存在
+         *
+         * @param o 某个对象
+         * @return 在集合中是否存在
+         */
+        public final boolean contains(Object o) {
+            return containsValue(o);
+        }
+
+        /**
+         * 可分割迭代器
+         *
+         * @return 一个可分割迭代器
+         */
+        public final Spliterator<V> spliterator() {
+            return new ValueSpliterator<>(HashMap.this, 0, -1, 0, 0);
+        }
+
+        /**
+         * 针对每个元素所做的操作
+         *
+         * @param action 要执行的操作
+         */
+        public final void forEach(Consumer<? super V> action) {
+            // 要执行的动作不能为空
+            if (action == null) {
+                throw new NullPointerException();
+            }
+
+            // 指向当前数组
+            Node<K, V>[] tab = table;
+            // 如果数组不为空
+            if (size > 0 && tab != null) {
+                // 记录一下当前的 modCount
+                int mc = modCount;
+
+                // 遍历链表
+                for (int i = 0; i < tab.length; ++i) {
+                    for (Node<K, V> e = tab[i]; e != null; e = e.next)
+                        action.accept(e.value);
+                }
+
+                // 支持 fail-fast 机制
+                if (modCount != mc) {
+                    throw new ConcurrentModificationException();
+                }
+            }
+        }
     }
 
-    // Callbacks to allow LinkedHashMap post-actions
-    void afterNodeAccess(Node<K, V> p) {
-    }
+    /**
+     * 一个由键值对组合组成的集合
+     *
+     * @see AbstractSet
+     * @see Map.Entry
+     */
+    final class EntrySet extends AbstractSet<Map.Entry<K, V>> {
+        /**
+         * 当前集合的容量, 这个容量与 {@link HashMap#size} 应该是相等的
+         *
+         * @return
+         */
+        public final int size() {
+            return size;
+        }
 
-    void afterNodeInsertion(boolean evict) {
-    }
+        /**
+         * 清空所有键值对
+         */
+        public final void clear() {
+            HashMap.this.clear();
+        }
 
-    void afterNodeRemoval(Node<K, V> p) {
-    }
+        /**
+         * 返回迭代器
+         *
+         * @return 一个迭代器
+         */
+        public final Iterator<Map.Entry<K, V>> iterator() {
+            return new EntryIterator();
+        }
 
-    // Called only from writeObject, to ensure compatible ordering.
-    void internalWriteEntries(java.io.ObjectOutputStream s) throws IOException {
-        Node<K, V>[] tab;
-        if (size > 0 && (tab = table) != null) {
-            for (int i = 0; i < tab.length; ++i) {
-                for (Node<K, V> e = tab[i]; e != null; e = e.next) {
-                    s.writeObject(e.key);
-                    s.writeObject(e.value);
+        /**
+         * 根据键判断某个键值对是否存在
+         *
+         * @param o 某个键值对
+         * @return 这个键值对是否存在
+         */
+        public final boolean contains(Object o) {
+            // 如果不是 Map.Entry 就直接返回 false
+            if (!(o instanceof Map.Entry)) {
+                return false;
+            }
+            // 强转类型
+            Map.Entry<?, ?> e = (Map.Entry<?, ?>) o;
+            // 通过键获取节点
+            Object key = e.getKey();
+            Node<K, V> candidate = getNode(hash(key), key);
+            // 如果节点存在并且与参数传入的键值对相同, 则认为存在
+            return candidate != null && candidate.equals(e);
+        }
+
+        /**
+         * 移除某个键值对
+         *
+         * @param o 某个键值对
+         * @return 是否移除了
+         */
+        public final boolean remove(Object o) {
+            // 非 Map.Entry 对象不做处理
+            if (o instanceof Map.Entry) {
+                // 通过 HashMap.removeNode 方法移除节点
+                Map.Entry<?, ?> e = (Map.Entry<?, ?>) o;
+                Object key = e.getKey();
+                Object value = e.getValue();
+                return removeNode(hash(key), key, value, true, true) != null;
+            }
+            return false;
+        }
+
+        /**
+         * 可分割迭代器
+         *
+         * @return 一个可分割迭代器
+         */
+        public final Spliterator<Map.Entry<K, V>> spliterator() {
+            return new EntrySpliterator<>(HashMap.this, 0, -1, 0, 0);
+        }
+
+        /**
+         * 对每个元素要执行的操作
+         *
+         * @param action 要执行的操作
+         */
+        public final void forEach(Consumer<? super Map.Entry<K, V>> action) {
+            // 操作不能为空
+            if (action == null) {
+                throw new NullPointerException();
+            }
+
+            // 遍历数组
+            Node<K, V>[] tab = table;
+            if (size > 0 && tab != null) {
+                // 保存当前的 modCount
+                int mc = modCount;
+                // 遍历链表
+                for (int i = 0; i < tab.length; ++i) {
+                    for (Node<K, V> e = tab[i]; e != null; e = e.next) {
+                        action.accept(e);
+                    }
+                }
+                // 支持 fail-fast 机制
+                if (modCount != mc) {
+                    throw new ConcurrentModificationException();
                 }
             }
         }

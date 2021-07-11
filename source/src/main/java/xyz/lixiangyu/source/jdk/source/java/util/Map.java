@@ -1180,4 +1180,23 @@ public interface Map<K,V> {
         }
         return newValue;
     }
+
+    /**
+     * 要打印的映射信息, 这个方法默认是不会打印每个节点的信息的
+     *
+     * @return 要打印的信息
+     */
+    default String getMapInfo() {
+        return getMapInfo(false);
+    }
+
+    /**
+     * 要打印的映射信息
+     *
+     * @param outputEachNode 是否打印每个节点的信息
+     * @return 要打印的信息
+     */
+    default String getMapInfo(boolean outputEachNode) {
+        return "";
+    }
 }

@@ -1,4 +1,4 @@
-package xyz.lixiangyu.source.jdk.java.lang;
+package java.lang;
 
 import org.junit.Test;
 
