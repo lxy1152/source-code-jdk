@@ -26,7 +26,6 @@ copy rt.jar ..\
 echo new rt.jar output to: .\source\target\rt.jar
 
 :: 替换原有的rt.jar
-del %rtPath%\rt.jar
 copy rt.jar %rtPath%
 del rt.jar
 
