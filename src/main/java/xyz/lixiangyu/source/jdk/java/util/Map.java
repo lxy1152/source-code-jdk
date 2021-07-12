@@ -1199,4 +1199,8 @@ public interface Map<K,V> {
     default String getMapInfo(boolean outputEachNode) {
         return "";
     }
+
+    default void test() {
+
+    }
 }

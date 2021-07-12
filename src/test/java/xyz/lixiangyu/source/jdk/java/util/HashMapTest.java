@@ -1,4 +1,4 @@
-package xyz.lixiangyu.source.jdk.source.java.util;
+package xyz.lixiangyu.source.jdk.java.util;
 
 import org.junit.After;
 import org.junit.Before;
