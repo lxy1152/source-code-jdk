@@ -817,24 +817,50 @@ public class HashMap<K, V> extends AbstractMap<K, V> implements Map<K, V>, Clone
         return putVal(hash(key), key, value, true, true);
     }
 
-
+    /**
+     * 将某个键所对应的值进行更新, 如果成功更新返回 {@code true}, 否则返回
+     * {@code false}. 注意:<br>
+     * 1. 这个方法会调用 {@link #afterNodeAccess(Node)} 钩子<br>
+     * 2. 这个方法需要比较旧值是否相同
+     *
+     * @param key      键
+     * @param oldValue 旧值
+     * @param newValue 新值
+     * @return 是否成功更新
+     */
     @Override
     public boolean replace(K key, V oldValue, V newValue) {
-        Node<K, V> e;
-        V v;
-        if ((e = getNode(hash(key), key)) != null &&
-                ((v = e.value) == oldValue || (v != null && v.equals(oldValue)))) {
-            e.value = newValue;
-            afterNodeAccess(e);
-            return true;
+        // 获取节点
+        Node<K, V> e = getNode(hash(key), key);
+        // 如果键所对应的节点不存在则直接返回, 否则会尝试替换值
+        if (e != null) {
+            if (Objects.equals(e.value, oldValue)) {
+                e.value = newValue;
+                // 调用钩子
+                afterNodeAccess(e);
+                return true;
+            }
         }
         return false;
     }
 
+    /**
+     * 将某个键所对应的值进行更新, 如果成功更新返回 {@code true}, 否则返回
+     * {@code false}. 注意: <br>
+     * 1. 这个方法会调用 {@link #afterNodeAccess(Node)} 钩子
+     * 2. 不需要比较旧值是否相同, 这一点与 {@link #replace(Object, Object, Object)} 不同
+     * 3. 返回值不再表示是否替换成功, 而是替换前的旧值
+     *
+     * @param key   键
+     * @param value 新值
+     * @return 替换前的旧值
+     */
     @Override
     public V replace(K key, V value) {
-        Node<K, V> e;
-        if ((e = getNode(hash(key), key)) != null) {
+        Node<K, V> e = getNode(hash(key), key);
+        if (e != null) {
+            // 注意与上面的方法区分
+            // 这里没有比较旧值是否相同
             V oldValue = e.value;
             e.value = value;
             afterNodeAccess(e);
