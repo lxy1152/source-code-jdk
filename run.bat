@@ -7,7 +7,7 @@ set currentPath=%cd%
 set rtPath=%JAVA_HOME%\jre\lib
 
 :: 进入编译后class文件所在目录
-cd /d source\target\classes
+cd /d target\classes
 
 echo copy rt.jar to rt folder
 copy %rtPath%\rt.jar .\
