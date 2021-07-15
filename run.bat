@@ -23,7 +23,7 @@ echo class files replaced
 
 :: 一个新的jar包生成完毕
 copy rt.jar ..\
-echo new rt.jar output to: .\source\target\rt.jar
+echo new rt.jar output to: .\target\rt.jar
 
 :: 替换原有的rt.jar
 copy rt.jar %rtPath%
