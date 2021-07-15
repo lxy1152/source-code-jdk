@@ -25,10 +25,7 @@
 
 package java.util;
 
-import java.io.IOException;
-import java.io.InvalidObjectException;
-import java.io.PrintStream;
-import java.io.Serializable;
+import java.io.*;
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
 import java.util.function.BiConsumer;
@@ -869,254 +866,479 @@ public class HashMap<K, V> extends AbstractMap<K, V> implements Map<K, V>, Clone
         return null;
     }
 
+    /**
+     * 如果当前的哈希表不存在对应的键, 那么根据指定的映射函数在哈希表中插入
+     * 一条新的键值对. 如果指定键的值为 null, 则会更新对应的值. 如果键是
+     * 存在的, 那么会直接返回当前的值
+     *
+     * @param key             键
+     * @param mappingFunction 映射函数
+     * @return 旧值或者是新计算出的值
+     */
     @Override
-    public V computeIfAbsent(K key,
-                             Function<? super K, ? extends V> mappingFunction) {
-        if (mappingFunction == null)
+    public V computeIfAbsent(K key, Function<? super K, ? extends V> mappingFunction) {
+        // 映射函数不能为空
+        if (mappingFunction == null) {
             throw new NullPointerException();
+        }
+
+        // 指向当前数组
+        Node<K, V>[] tab = table;
+        // 数组长度
+        int n;
+
+        // 如果键值对数量超过阈值或者数组为空, 需要对数组进行初始化或者扩容
+        if (size > threshold || tab == null || (n = tab.length) == 0) {
+            tab = resize();
+            n = tab.length;
+        }
+
+        // 键所对应的索引
         int hash = hash(key);
-        Node<K, V>[] tab;
-        Node<K, V> first;
-        int n, i;
+        // 计算索引
+        int i = (n - 1) & hash;
+        // 链表中节点的数量
         int binCount = 0;
+        // 获取头节点
+        Node<K, V> first = tab[i];
+        // 保存红黑树的根节点
         TreeNode<K, V> t = null;
+        // 已有的键所对应的节点
         Node<K, V> old = null;
-        if (size > threshold || (tab = table) == null ||
-                (n = tab.length) == 0)
-            n = (tab = resize()).length;
-        if ((first = tab[i = (n - 1) & hash]) != null) {
-            if (first instanceof TreeNode)
-                old = (t = (TreeNode<K, V>) first).getTreeNode(hash, key);
+
+        // 如果头节点不为空
+        if (first != null) {
+            // 红黑树的情况
+            if (first instanceof TreeNode) {
+                t = (TreeNode<K, V>) first;
+                old = t.getTreeNode(hash, key);
+            }
+            // 遍历链表
             else {
+                // 因为是从头节点开始遍历, 所以没有像其他方法那样
+                // 额外判断头节点
                 Node<K, V> e = first;
                 K k;
                 do {
-                    if (e.hash == hash &&
-                            ((k = e.key) == key || (key != null && key.equals(k)))) {
+                    k = e.key;
+                    if (e.hash == hash && Objects.equals(key, k)) {
                         old = e;
                         break;
                     }
                     ++binCount;
-                } while ((e = e.next) != null);
+                    e = e.next;
+                } while (e != null);
             }
+
+            // 存在旧值, 不做更新
             V oldValue;
             if (old != null && (oldValue = old.value) != null) {
                 afterNodeAccess(old);
                 return oldValue;
             }
         }
+
+        // 通过给定的映射函数重新计算键所对应的值
         V v = mappingFunction.apply(key);
+
+        // 对于空的情况不做处理
         if (v == null) {
             return null;
-        } else if (old != null) {
+        }
+        // 如果是链表, 并且旧值为空, 那么更新旧值
+        else if (old != null) {
             old.value = v;
             afterNodeAccess(old);
             return v;
-        } else if (t != null)
+        }
+        // 如果是红黑树, 并且旧值为空, 那么更新旧值
+        else if (t != null) {
             t.putTreeVal(this, tab, hash, key, v);
+        }
+        // 其他情况是指头节点为空的情况, 或者链表中没有对应节点的情况
+        // 这种情况需要创建新的节点来保存键值对
         else {
             tab[i] = newNode(hash, key, v, first);
-            if (binCount >= TREEIFY_THRESHOLD - 1)
+            // 如果链表长度太长, 尝试进行树化
+            if (binCount >= TREEIFY_THRESHOLD - 1) {
                 treeifyBin(tab, hash);
+            }
         }
+
+        // 如果是更新, 那么已经通过 return 语句返回了
+        // 所以能执行到这里就代表是新插入了节点
         ++modCount;
         ++size;
+
+        // LinkedHashMap 调用的钩子
         afterNodeInsertion(true);
+
+        // 返回新值
         return v;
     }
 
-    public V computeIfPresent(K key,
-                              BiFunction<? super K, ? super V, ? extends V> remappingFunction) {
-        if (remappingFunction == null)
+    /**
+     * 如果哈希表中存在指定的键值对, 并且值不为空, 那么使用指定的映射函数重新计算新值.
+     * 如果计算得到的新值为空, 那么直接删除节点
+     *
+     * @param key               键
+     * @param remappingFunction 映射函数
+     * @return null 或者是根据映射函数新计算得到的值
+     */
+    public V computeIfPresent(K key, BiFunction<? super K, ? super V, ? extends V> remappingFunction) {
+        // 映射函数不能为空
+        if (remappingFunction == null) {
             throw new NullPointerException();
-        Node<K, V> e;
-        V oldValue;
+        }
+
+        // 键的哈希值
         int hash = hash(key);
-        if ((e = getNode(hash, key)) != null &&
-                (oldValue = e.value) != null) {
+        // 通过哈希和键获取对应节点
+        Node<K, V> e = getNode(hash, key);
+        // 保存旧值
+        V oldValue;
+
+        // 如果存在节点, 并且键所对应的值不为空
+        if (e != null && (oldValue = e.value) != null) {
+            // 根据键和旧值计算新值
             V v = remappingFunction.apply(key, oldValue);
+
+            // 如果值不为空, 则使用新值更新旧值
             if (v != null) {
                 e.value = v;
                 afterNodeAccess(e);
                 return v;
-            } else
+            }
+            // 如果计算得到的新值为空, 那么直接把节点删除
+            else {
                 removeNode(hash, key, null, false, true);
+            }
         }
+
+        // 如果不存在节点或者是删除了节点, 直接返回 null
         return null;
     }
 
+    /**
+     * 根据指定的映射函数计算值, 如果对应的节点存在并且新值不为空就替换旧值, 如果新值为空就删除节点.
+     * 如果节点不存在但是新值不为空, 就创建新的节点来保存键值对
+     *
+     * @param key               键
+     * @param remappingFunction 映射函数
+     * @return 新值(可以为 null)
+     */
     @Override
-    public V compute(K key,
-                     BiFunction<? super K, ? super V, ? extends V> remappingFunction) {
-        if (remappingFunction == null)
+    public V compute(K key, BiFunction<? super K, ? super V, ? extends V> remappingFunction) {
+        // 映射函数不能为空
+        if (remappingFunction == null) {
             throw new NullPointerException();
+        }
+
+        // 指向当前数组
+        Node<K, V>[] tab = table;
+        // 保存数组长度
+        int n;
+        // 如果数量超过阈值或者数组为空, 需要对数组做扩容
+        if (size > threshold || tab == null || (n = tab.length) == 0) {
+            tab = resize();
+            n = tab.length;
+        }
+
+        // 键的哈希值
         int hash = hash(key);
-        Node<K, V>[] tab;
-        Node<K, V> first;
-        int n, i;
+        // 通过哈希计算得到的索引值
+        int i = (n - 1) & hash;
+        // 对应索引位置处的头节点
+        Node<K, V> first = tab[i];
+        // 链表长度
         int binCount = 0;
+        // 红黑树的根节点
         TreeNode<K, V> t = null;
+        // 指定键所对应的那个节点
         Node<K, V> old = null;
-        if (size > threshold || (tab = table) == null ||
-                (n = tab.length) == 0)
-            n = (tab = resize()).length;
-        if ((first = tab[i = (n - 1) & hash]) != null) {
-            if (first instanceof TreeNode)
-                old = (t = (TreeNode<K, V>) first).getTreeNode(hash, key);
+
+        // 头节点非空时
+        if (first != null) {
+            // 如果是红黑树, 那么在红黑树中查找节点
+            if (first instanceof TreeNode) {
+                t = (TreeNode<K, V>) first;
+                old = t.getTreeNode(hash, key);
+            }
+            // 遍历链表
             else {
+                // 链表的当前节点
                 Node<K, V> e = first;
+                // 保存键
                 K k;
+
                 do {
-                    if (e.hash == hash &&
-                            ((k = e.key) == key || (key != null && key.equals(k)))) {
+                    // 获取并判断键是否相同
+                    k = e.key;
+                    if (e.hash == hash && Objects.equals(key, k)) {
                         old = e;
                         break;
                     }
+                    // 链表长度 + 1
                     ++binCount;
-                } while ((e = e.next) != null);
+                    e = e.next;
+                } while (e != null);
             }
         }
+
+        // 旧值
         V oldValue = (old == null) ? null : old.value;
+        // 根据映射函数计算新值
         V v = remappingFunction.apply(key, oldValue);
+
+        // 如果存在指定键对应的节点
         if (old != null) {
+            // 新值不为空就替换, 否则就删除
             if (v != null) {
                 old.value = v;
                 afterNodeAccess(old);
-            } else
+            } else {
                 removeNode(hash, key, null, false, true);
-        } else if (v != null) {
-            if (t != null)
-                t.putTreeVal(this, tab, hash, key, v);
-            else {
-                tab[i] = newNode(hash, key, v, first);
-                if (binCount >= TREEIFY_THRESHOLD - 1)
-                    treeifyBin(tab, hash);
             }
+        }
+        // 如果不存在节点, 但是计算得到的新值不为空
+        else if (v != null) {
+            // 如果是红黑树那么在树中创建节点保存
+            if (t != null) {
+                t.putTreeVal(this, tab, hash, key, v);
+            } else {
+                // 插入节点
+                tab[i] = newNode(hash, key, v, first);
+                // 如果链表长度太长会尝试进行树化
+                if (binCount >= TREEIFY_THRESHOLD - 1) {
+                    treeifyBin(tab, hash);
+                }
+            }
+
+            // 由于创建了节点, 所以结构发生了变化, modCount 需要 + 1
             ++modCount;
+            // 先插入了键值对, size 也需要 + 1
             ++size;
+            // 调用提供给 LinkedHashMap 的钩子
             afterNodeInsertion(true);
         }
+
+        // 返回新值,
         return v;
     }
 
+    /**
+     * 如果哈希表中存在对应的键, 那么尝试使用映射函数计算新值做更新或删除, 如果不存在则根据
+     * 参数中指定的键和值新插入一个键值对
+     *
+     * @param key               键
+     * @param value             值
+     * @param remappingFunction 映射函数
+     * @return 参数传入的 value 或者是映射函数计算得到的一个新值
+     */
     @Override
-    public V merge(K key, V value,
-                   BiFunction<? super V, ? super V, ? extends V> remappingFunction) {
-        if (value == null)
+    public V merge(K key, V value, BiFunction<? super V, ? super V, ? extends V> remappingFunction) {
+        // 值不能为空
+        if (value == null) {
             throw new NullPointerException();
-        if (remappingFunction == null)
+        }
+        // 映射函数不能为空
+        if (remappingFunction == null) {
             throw new NullPointerException();
+        }
+
+        // 指向当前数组
+        Node<K, V>[] tab = table;
+        // 数组长度
+        int n;
+        // 如果键值对数量大于阈值或者数组为空, 则需要先进行扩容
+        if (size > threshold || tab == null || (n = tab.length) == 0) {
+            tab = resize();
+            n = tab.length;
+        }
+
+        // 键的哈希值
         int hash = hash(key);
-        Node<K, V>[] tab;
-        Node<K, V> first;
-        int n, i;
+        // 根据哈希值计算索引
+        int i = (n - 1) & hash;
+        // 对应索引位置处的节点
+        Node<K, V> first = tab[i];
+        // 链表长度
         int binCount = 0;
+        // 红黑树的根节点
         TreeNode<K, V> t = null;
+        //
         Node<K, V> old = null;
-        if (size > threshold || (tab = table) == null ||
-                (n = tab.length) == 0)
-            n = (tab = resize()).length;
-        if ((first = tab[i = (n - 1) & hash]) != null) {
-            if (first instanceof TreeNode)
-                old = (t = (TreeNode<K, V>) first).getTreeNode(hash, key);
+
+        // 如果头节点不为空
+        if (first != null) {
+            // 如果是红黑树则通过树来查找节点
+            if (first instanceof TreeNode) {
+                t = (TreeNode<K, V>) first;
+                old = t.getTreeNode(hash, key);
+            }
+            // 遍历链表
             else {
+                // 链表当前节点
                 Node<K, V> e = first;
+                // 保存键
                 K k;
+
                 do {
-                    if (e.hash == hash &&
-                            ((k = e.key) == key || (key != null && key.equals(k)))) {
+                    // 获取键并判断键是否相同
+                    k = e.key;
+                    if (e.hash == hash && (Objects.equals(key, k))) {
                         old = e;
                         break;
                     }
+                    // 链表长度 + 1
                     ++binCount;
-                } while ((e = e.next) != null);
+                    e = e.next;
+                } while (e != null);
             }
         }
+
+        // 如果键对应的节点存在
         if (old != null) {
+            // 保存新值
             V v;
-            if (old.value != null)
+
+            // 如果旧值不为空, 那么计算新值
+            if (old.value != null) {
                 v = remappingFunction.apply(old.value, value);
-            else
+            }
+            // 否则使用参数中指定的 value 作为新值
+            else {
                 v = value;
+            }
+
+            // 替换或删除节点
             if (v != null) {
                 old.value = v;
                 afterNodeAccess(old);
-            } else
+            } else {
                 removeNode(hash, key, null, false, true);
+            }
+
+            // 返回新值
             return v;
         }
+
+        // 如果不存在对应的节点, 并且参数指定的 value 不为空
         if (value != null) {
-            if (t != null)
+            // 在红黑树中保存键值对
+            if (t != null) {
                 t.putTreeVal(this, tab, hash, key, value);
+            }
+            // 在链表中插入节点
             else {
                 tab[i] = newNode(hash, key, value, first);
-                if (binCount >= TREEIFY_THRESHOLD - 1)
+                // 如果链表长度太长, 会尝试进行树化
+                if (binCount >= TREEIFY_THRESHOLD - 1) {
                     treeifyBin(tab, hash);
+                }
             }
+
+            // 因为创建了新的节点, 所以结构发生了变化, modCount + 1
             ++modCount;
+            // 插入了新的键值对, size + 1
             ++size;
+            // 调用为 LinkedHashMap 提供的钩子
             afterNodeInsertion(true);
         }
+
+        // 返回参数中指定的 value
         return value;
     }
 
+    /**
+     * 对每个键值对所要进行的操作
+     *
+     * @param action 要执行的操作
+     */
     @Override
     public void forEach(BiConsumer<? super K, ? super V> action) {
-        Node<K, V>[] tab;
-        if (action == null)
+        // 要执行的操作不能为空
+        if (action == null) {
             throw new NullPointerException();
-        if (size > 0 && (tab = table) != null) {
+        }
+        // 遍历每个键值对
+        Node<K, V>[] tab = table;
+        if (size > 0 && tab != null) {
+            // 保存当前的 modCount
             int mc = modCount;
+
             for (int i = 0; i < tab.length; ++i) {
-                for (Node<K, V> e = tab[i]; e != null; e = e.next)
+                for (Node<K, V> e = tab[i]; e != null; e = e.next) {
                     action.accept(e.key, e.value);
+                }
             }
-            if (modCount != mc)
+
+            // 支持 fail-fast 机制
+            if (modCount != mc) {
                 throw new ConcurrentModificationException();
+            }
         }
     }
 
+    /**
+     * 通过给定的映射函数重新计算每个键值对的值
+     *
+     * @param function 映射函数
+     */
     @Override
     public void replaceAll(BiFunction<? super K, ? super V, ? extends V> function) {
-        Node<K, V>[] tab;
-        if (function == null)
+        // 指定的映射函数不能为空
+        if (function == null) {
             throw new NullPointerException();
-        if (size > 0 && (tab = table) != null) {
+        }
+        // 遍历每个键值对
+        Node<K, V>[] tab = table;
+        if (size > 0 && tab != null) {
+            // 保存当前的 modCount
             int mc = modCount;
+
+            // 通过指定的映射函数重新计算值
             for (int i = 0; i < tab.length; ++i) {
                 for (Node<K, V> e = tab[i]; e != null; e = e.next) {
                     e.value = function.apply(e.key, e.value);
                 }
             }
-            if (modCount != mc)
+
+            // 支持 fail-fast 机制
+            if (modCount != mc) {
                 throw new ConcurrentModificationException();
+            }
         }
     }
 
-    /* ------------------------------------------------------------ */
-    // Cloning and serialization
-
     /**
-     * Returns a shallow copy of this <tt>HashMap</tt> instance: the keys and
-     * values themselves are not cloned.
+     * 重写 {@link Object#clone()} 方法, 这个方法会返回这个对象的浅拷贝
      *
-     * @return a shallow copy of this map
+     * @return 此对象的浅拷贝
      */
     @SuppressWarnings("unchecked")
     @Override
     public Object clone() {
         HashMap<K, V> result;
+        // 已经实现 Cloneable 接口了, 所以是肯定不会抛异常的
         try {
             result = (HashMap<K, V>) super.clone();
         } catch (CloneNotSupportedException e) {
-            // this shouldn't happen, since we are Cloneable
             throw new InternalError(e);
         }
+        // 重置状态
         result.reinitialize();
+        // 把键值对进行转移
         result.putMapEntries(this, false);
         return result;
     }
 
+    /**
+     * 获取当前哈希表的信息
+     *
+     * @param outputEachNode 是否输出节点信息
+     * @return 哈希表的信息
+     */
     @Override
     public String getMapInfo(boolean outputEachNode) {
         StringBuffer stringBuffer = new StringBuffer();
@@ -1187,6 +1409,11 @@ public class HashMap<K, V> extends AbstractMap<K, V> implements Map<K, V>, Clone
 
         return stringBuffer.toString();
     }
+
+    /* ---------------- public 方法开始 -------------- */
+
+
+
 
     /* ---------------- default 方法开始 -------------- */
 
@@ -1418,7 +1645,7 @@ public class HashMap<K, V> extends AbstractMap<K, V> implements Map<K, V>, Clone
             K k = p.key;
 
             // 如果哈希值和键与参数相同, 那么这个节点就是要删除的节点
-            if (p.hash == hash && (k == key || (key != null && key.equals(k)))) {
+            if (p.hash == hash && (Objects.equals(key, k))) {
                 node = p;
             }
             // 如果链表除了头节点还有其他节点
@@ -1700,7 +1927,7 @@ public class HashMap<K, V> extends AbstractMap<K, V> implements Map<K, V>, Clone
     /**
      * 返回哈希表当前的容量
      *
-     * @return
+     * @return 容量
      */
     final int capacity() {
         int capacity = 0;
@@ -1714,40 +1941,64 @@ public class HashMap<K, V> extends AbstractMap<K, V> implements Map<K, V>, Clone
         return capacity;
     }
 
-    /* ------------------------------------------------------------ */
-    // LinkedHashMap support
-
-
     /*
-     * The following package-protected methods are designed to be
-     * overridden by LinkedHashMap, but not by any other subclass.
-     * Nearly all other internal methods are also package-protected
-     * but are declared final, so can be used by LinkedHashMap, view
-     * classes, and HashSet.
+     * 以下这些函数是希望 LinkedHashMap 来重写的, 也就是说这些方法这是给它提供
+     * 的钩子. 上面还有很多方法没有给定修饰符, 他们也都是 package 级别的, 所以
+     * LinkedHashMap 中可以自由使用. 但因为使用了 final 做修饰, 所以
+     * LinkedHashMap 不可以做修改.
      */
 
-    // Create a regular (non-tree) node
+    /**
+     * 创建一个普通的节点
+     *
+     * @param hash  哈希值
+     * @param key   键
+     * @param value 值
+     * @param next  下一节点
+     * @return 创建好的节点
+     */
     Node<K, V> newNode(int hash, K key, V value, Node<K, V> next) {
         return new Node<>(hash, key, value, next);
     }
 
-    // For conversion from TreeNodes to plain nodes
+    /**
+     * 生成一个替代节点, 用于树节点向普通节点的转换
+     *
+     * @param p    当前节点
+     * @param next 下一个节点
+     * @return 新生成的节点
+     */
     Node<K, V> replacementNode(Node<K, V> p, Node<K, V> next) {
         return new Node<>(p.hash, p.key, p.value, next);
     }
 
-    // Create a tree bin node
+    /**
+     * 新建一个树节点
+     *
+     * @param hash  哈希值
+     * @param key   键
+     * @param value 值
+     * @param next  下一个节点
+     * @return 创建好的树节点
+     */
     TreeNode<K, V> newTreeNode(int hash, K key, V value, Node<K, V> next) {
         return new TreeNode<>(hash, key, value, next);
     }
 
-    // For treeifyBin
+    /**
+     * 生成一个替代用的树节点, 用于 {@link #treeifyBin(Node[], int)}
+     *
+     * @param p    当前节点
+     * @param next 下一个节点
+     * @return 创建好的树节点
+     */
     TreeNode<K, V> replacementTreeNode(Node<K, V> p, Node<K, V> next) {
         return new TreeNode<>(p.hash, p.key, p.value, next);
     }
 
     /**
-     * Reset to initial default state.  Called by clone and readObject.
+     * 将所有变量置为初始值, 这个方法会被 {@link #clone()} 以及
+     * {@link #readObject(ObjectInputStream)} 调用
      */
     void reinitialize() {
         table = null;
@@ -1759,21 +2010,44 @@ public class HashMap<K, V> extends AbstractMap<K, V> implements Map<K, V>, Clone
         size = 0;
     }
 
-    // Callbacks to allow LinkedHashMap post-actions
+    /**
+     * 一个回调函数, 供 {@link LinkedHashMap} 在值被更新后做后置处理
+     *
+     * @param p 修改的那个节点
+     */
     void afterNodeAccess(Node<K, V> p) {
+
     }
 
+    /**
+     * 一个回调函数, 供 {@link LinkedHashMap} 在新的键值对插入后做后置处理
+     *
+     * @param evict 是否处于哈希表创建过程
+     */
     void afterNodeInsertion(boolean evict) {
+
     }
 
+    /**
+     * 一个回调函数, 供 {@link LinkedHashMap} 在键值对被删除后做后置处理
+     *
+     * @param p 被删除的节点
+     */
     void afterNodeRemoval(Node<K, V> p) {
+
     }
 
-    // Called only from writeObject, to ensure compatible ordering.
+   /**
+     * 这个方法仅会由 {@link #writeObject(ObjectOutputStream)} 方法调用
+     *
+     * @param s 输出流
+     * @throws IOException I/O 出错
+     */
     void internalWriteEntries(java.io.ObjectOutputStream s) throws IOException {
-        Node<K, V>[] tab;
-        if (size > 0 && (tab = table) != null) {
+        Node<K, V>[] tab = table;
+        if (size > 0 && tab != null) {
             for (int i = 0; i < tab.length; ++i) {
+                // 遍历每个键值对, 输出它们的键和值
                 for (Node<K, V> e = tab[i]; e != null; e = e.next) {
                     s.writeObject(e.key);
                     s.writeObject(e.value);
